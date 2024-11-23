@@ -1,0 +1,89 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.37.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           HTPL-thesis
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/HTPL-thesis#readme>
+homepage:       https://github.com/githubuser/HTPL-thesis#readme
+bug-reports:    https://github.com/githubuser/HTPL-thesis/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2024 Author name here
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/HTPL-thesis
+
+library
+  exposed-modules:
+      AST
+      Error
+      Evaluator
+      Parser
+      Parser.Lexer
+      Parser.ParserImpl
+  other-modules:
+      Paths_HTPL_thesis
+  autogen-modules:
+      Paths_HTPL_thesis
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      base >=4.7 && <5
+    , containers
+    , megaparsec >=9.2.2
+    , mtl
+    , parser-combinators >=1.3.0
+    , text
+  default-language: Haskell2010
+
+executable HTPL-thesis-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_HTPL_thesis
+  autogen-modules:
+      Paths_HTPL_thesis
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      HTPL-thesis
+    , base >=4.7 && <5
+    , containers
+    , megaparsec >=9.2.2
+    , mtl
+    , parser-combinators >=1.3.0
+    , text
+  default-language: Haskell2010
+
+test-suite HTPL-thesis-test
+  type: exitcode-stdio-1.0
+  main-is: ParserTests.hs
+  other-modules:
+      Paths_HTPL_thesis
+  autogen-modules:
+      Paths_HTPL_thesis
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      HTPL-thesis
+    , base >=4.7 && <5
+    , containers
+    , megaparsec >=9.2.2
+    , mtl
+    , parser-combinators >=1.3.0
+    , tasty
+    , tasty-hunit
+    , text
+  default-language: Haskell2010
