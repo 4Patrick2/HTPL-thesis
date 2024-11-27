@@ -25,7 +25,10 @@ dependencies:
 - containers
 - megaparsec >= 9.2.2
 - parser-combinators >= 1.3.0
-- mtl
+- mtl >= 2.2.2
+- monad-validate >= 1.2.0.1
+- partial-order
+- multimap >= 1.2.1
 
 ghc-options:
 - -Wall
@@ -39,7 +42,9 @@ ghc-options:
 - -Wredundant-constraints
 
 library:
-  source-dirs: src
+  source-dirs: 
+  - src
+  - simulator
 
 executables:
   HTPL-thesis-exe:

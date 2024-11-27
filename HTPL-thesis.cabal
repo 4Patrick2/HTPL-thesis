@@ -26,24 +26,60 @@ source-repository head
 library
   exposed-modules:
       AST
+      Env
       Error
       Evaluator
       Parser
       Parser.Lexer
       Parser.ParserImpl
+      Specification
+      Common.AST
+      Common.Error
+      Common.IOStuff
+      Common.Lexer
+      Common.Parser
+      Common.Parser.Impl
+      Common.Parser.Type
+      Common.Pretty
+      Common.Reduce
+      Common.TypeCheck
+      Common.Util
+      HTPL.AST
+      HTPL.Env
+      HTPL.Error
+      HTPL.Eval
+      HTPL.Interface
+      HTPL.Parser
+      HTPL.Parser.Impl
+      HTPL.PolicyCheck
+      HTPL.SpecCheck
+      TPL.API
+      TPL.AST
+      TPL.Env
+      TPL.Error
+      TPL.GraphTraversal
+      TPL.Interface
+      TPL.LatticeOps
+      TPL.Parser
+      TPL.Parser.Impl
+      TPL.StaticCheck
   other-modules:
       Paths_HTPL_thesis
   autogen-modules:
       Paths_HTPL_thesis
   hs-source-dirs:
       src
+      simulator
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.7 && <5
     , containers
     , megaparsec >=9.2.2
-    , mtl
+    , monad-validate >=1.2.0.1
+    , mtl >=2.2.2
+    , multimap >=1.2.1
     , parser-combinators >=1.3.0
+    , partial-order
     , text
   default-language: Haskell2010
 
@@ -61,8 +97,11 @@ executable HTPL-thesis-exe
     , base >=4.7 && <5
     , containers
     , megaparsec >=9.2.2
-    , mtl
+    , monad-validate >=1.2.0.1
+    , mtl >=2.2.2
+    , multimap >=1.2.1
     , parser-combinators >=1.3.0
+    , partial-order
     , text
   default-language: Haskell2010
 
@@ -81,8 +120,11 @@ test-suite HTPL-thesis-test
     , base >=4.7 && <5
     , containers
     , megaparsec >=9.2.2
-    , mtl
+    , monad-validate >=1.2.0.1
+    , mtl >=2.2.2
+    , multimap >=1.2.1
     , parser-combinators >=1.3.0
+    , partial-order
     , tasty
     , tasty-hunit
     , text

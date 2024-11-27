@@ -75,10 +75,7 @@ type Atom  = T.Text
 
 
 --------------
--- data Network = Network {imp :: Import, lang :: Language, exps :: Expressions}
---   deriving (Eq, Show)
 
--- data Network = Network {imp :: [Import], lang :: Language}
 data Network = Network {imp :: [Import], lang :: Language, exps :: [Expression]}
   deriving (Eq, Show, Read)
 
@@ -124,3 +121,31 @@ data Aspects = Aspect ATag [ALang]
 data Pred = 
       Pred Atom Atom Expression
     deriving (Eq, Show, Read)
+
+
+
+
+-- -- Simulator AST
+
+-- -- | Add parameter for flexibility
+-- data Type a = LeafT a | TDNST (Type a)
+--     deriving (Show, Eq, Read)
+
+-- -- | The standard type syntax of aspect languages
+-- type ALangType = Type ALangTypeTerm
+
+-- data ALangTypeTerm = Atomic
+--     deriving (Show, Eq, Read)
+
+-- data ALang = Atom Ident
+--            | TDNS (Tree ALang)
+--            | LTop | LBot
+--     deriving (Show, Eq, Read)
+
+-- type Ident    = T.Text -- Identifiers
+
+-- data Tree a = Node a
+--               (Tree a) -- | Left tree
+--               (Tree a) -- | Right tree
+--             | Leaf a
+--     deriving (Show, Eq, Read)
