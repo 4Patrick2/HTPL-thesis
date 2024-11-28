@@ -6,27 +6,28 @@ import AST
 import Parser
 import Env
 import TPL.API as TPL
+import qualified Data.Map.Strict as M
 import qualified Data.MultiMap       as MM
 import Control.Monad (foldM)
 import GHC.Base (undefined)
-import AST (Expression(EPolTmp))
-import qualified Data.IntMap as M
-import Control.Monad.Trans.RWS (modify)
+-- import AST (Expression(EPolTmp))
+
 
 
 --- Running the evaluator
 
 -- type Result a = Either RuntimeErrors a
-type Result a = a
+type Result a = Either Errors Environment
 
 runEvaluator :: Network -> Environment -> Result (Bindings, TPL.TrustStore)
 runEvaluator n env = do
     let result = evalStatements (exps n)
+    return result
 
 
 
 ----- Code from lars ------
-type PreTrustStore = MM.MultiMap (Identity, Identity) SuperPolicy
+type PreTrustStore = MM.MultiMap (Atom, Atom) SuperPolicy
 
 -- | Simulating the delegations to be executed locally be each entity
 toTrustStore :: PreTrustStore -> TPL.TrustStore
@@ -40,7 +41,7 @@ toTrustStore pstore = M.foldrWithKey ( \(i1, i2) pols acc ->
 evalStatements :: [Expression] -> PreTrustStore
 evalStatements stmts = undefined -- Go over every statement with environment
 
-evalStatement :: Exp -> PreTrustStore -> RunEnv PreTrustStore
+evalStatement :: Expression -> PreTrustStore -> RunEnv PreTrustStore
 evalStatement (EIf r e1 e2) pts     = undefined -- if statement
 evalStatement (EWhen r e1 e2) pts   = undefined -- When statement
 evalStatement (EImp a r es) pts     = undefined
@@ -58,6 +59,7 @@ evalStatement (EDel user1 user2 d e) pts  = do -- delegation
     ts <- TPL.performDelegation (user1, user2, evalStatement e) (toTrustStore pts) getTypeTable
     -- Or place in preTrustStore
     return ()
+    -- MISSING: Group delegations
 
 evalStatement (EValue v) pts        = do 
     return v 
@@ -96,19 +98,22 @@ lookupBinding a env = do
 
 
 ---- Evaluations
-evalGroup :: [Atoms] -> Value
+evalGroup :: [Atom] -> Value
 evalGroup = VGroup 
 
 
 -- Pred Atom Atom Expression
 evalPredicate :: Atom -> [Pred] -> PreTrustStore -> RunEnv()
-evalPredicate a (Pred a y pol) pts = do
-    r <- TPL.performComputation a y getTypeTable (toTrustStore pts) 
-    case r == pol of
-        -- True ->  
-        -- False -> 
+evalPredicate a (Pred x y pol) pts = undefined --do
+    -- r <- TPL.performComputation a y getTypeTable (toTrustStore pts) 
+    -- case r == pol of
+    --     -- True ->  
+    --     -- False -> 
 
-evalPred' :: Atom -> Atom -> Pol 
+-- evalPredicate a (Pred x a pol) pts = undefined
+-- evalPredicate a (Pred x y pol) pts = undefined --Error???
+
+-- evalPred' :: Atom -> Atom -> Pol 
 
 -- users = [users]
 -- pGroup = copy users # copy of all users 
@@ -121,8 +126,13 @@ evalPred' :: Atom -> Atom -> Pol
 -- return pGroup
 
 
-evalPredicate a (Pred x a pol) pts = undefined
-evalPredicate a (Pred x y pol) pts = undefined --Error???
+
+
+
+
+
+
+
 
 --- Ting der skal styr på:
     -- state med variabler og 

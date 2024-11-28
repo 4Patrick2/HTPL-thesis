@@ -6,10 +6,7 @@ import AST as T
 import Env
 import qualified TPL.API as TPL
 import qualified Data.Map.Strict as M
-import Env (Environment)
-
-import Common.AST
--- import Common.AST (ALang, ALangType, Type)
+import Common.AST 
 
 runSpecification :: T.Language -> Environment
 -- runSpecification :: Either Import Language -> Either StaticErrors Environment
@@ -20,15 +17,21 @@ parseFile :: T.FileName -> [T.Aspects]
 parseFile = undefined
 
 specification :: [T.Aspects] -> Environment
-specification l = do makeTypeTable l
-
+specification l = (languageOptions l, makeTypeTable l)
 
 -- Creates a table of the aspect tags along with their fallback language, which in this case is always Nothing
-makeTypeTable :: [T.Aspects] -> TPL.TypeTable 
+makeTypeTable :: [T.Aspects] -> M.Map Common.AST.ATag (Common.AST.ALangType, Common.AST.ALang)-- TPL.TypeTable 
 makeTypeTable s = M.fromList $ extractTags s
     where 
     extractTags (Aspect tag _options : as) = (tag, (TDNST (LeafT Atomic), LBot)) : extractTags as
     extractTags [] = []
+
+
+languageOptions :: [T.Aspects] -> LanguageOptions
+languageOptions s = M.fromList $ convertAspects s
+    where
+    convertAspects (Aspect tag options : as) = (tag, options) : convertAspects as
+    convertAspects [] = []
 
 --(Tag, Nothing)
 -- data Aspects = Aspect ATag [ALang]

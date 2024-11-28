@@ -16,7 +16,9 @@ data Value =
 
 type Bindings = M.Map Atom Value
 type LanguageOptions = M.Map ATag [ALang]
+-- type Environment =  TPL.TypeTable
 type Environment = (LanguageOptions, TPL.TypeTable)
+-- type Environment = (Bool, TPL.TypeTable)
 
 
 
@@ -30,7 +32,7 @@ type ReaderStateError e r b a = ValidateT e (ReaderT r (State b)) a
 type RunEnv a = ReaderStateError Errors Environment Bindings a
 
 runRuntimeEnv :: RunEnv a -> Environment
-                -> Bindings -> (Either RuntimeErrors a, Bindings)
+                -> Bindings -> (Either Errors a, Bindings)
 runRuntimeEnv action context =
     runState (runReaderT (runValidateT action) context)
 
