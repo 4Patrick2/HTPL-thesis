@@ -10,8 +10,9 @@ import qualified Data.Map.Strict as M
 import qualified Data.MultiMap       as MM
 import Control.Monad (foldM)
 import GHC.Base (undefined)
--- import AST (Expression(EPolTmp))
-
+import Control.Monad.State
+import Common.AST
+import Control.Monad.Error
 
 
 --- Running the evaluator
@@ -20,15 +21,15 @@ import GHC.Base (undefined)
 type Result a = Either Errors Environment
 
 runEvaluator :: Network -> Environment -> Result (Bindings, TPL.TrustStore)
-runEvaluator n env = do
-    let result = evalStatements (exps n)
-    return result
+runEvaluator n env = undefined
+-- runEvaluator n env = do
+--     let result = evalStatements (exps n)
+--     return (gets , toTrustStore result)
 
 
 
 ----- Code from lars ------
-type PreTrustStore = MM.MultiMap (Atom, Atom) SuperPolicy
-
+type PreTrustStore = MM.MultiMap (Atom, Atom) Common.AST.SuperPolicy
 -- | Simulating the delegations to be executed locally be each entity
 toTrustStore :: PreTrustStore -> TPL.TrustStore
 toTrustStore pstore = M.foldrWithKey ( \(i1, i2) pols acc ->
@@ -42,60 +43,46 @@ evalStatements :: [Expression] -> PreTrustStore
 evalStatements stmts = undefined -- Go over every statement with environment
 
 evalStatement :: Expression -> PreTrustStore -> RunEnv PreTrustStore
-evalStatement (EIf r e1 e2) pts     = undefined -- if statement
-evalStatement (EWhen r e1 e2) pts   = undefined -- When statement
-evalStatement (EImp a r es) pts     = undefined
-
-evalStatement (EDel user1 user2 d e) pts  = do -- delegation
--- Every user who has made delegations gets put into a user list in the state
-    -- type Delegation = (Identity, Identity, PrePolicies)
-    -- type PrePolicy   = Either Bool [(ATag, ALang)]
-    -- type PrePolicies = [PrePolicy]
-    -- performDelegation :: Delegation -> TrustStore -> TypeTable -> Result TrustStore
-
-    -- add user1 to list
-    -- add user2 to list
-    -- perform delegation
-    ts <- TPL.performDelegation (user1, user2, evalStatement e) (toTrustStore pts) getTypeTable
-    -- Or place in preTrustStore
-    return ()
-    -- MISSING: Group delegations
-
-evalStatement (EValue v) pts        = do 
-    return v 
-evalStatement (EVar a) pts          = do 
-    lookupBinding a
-evalStatement (EGroup a as) pts     = do
-    g <- evalGroup as
-    withBinding a g pts 
+evalStatement (EIf r e1 e2) pts         = undefined -- if statement
+evalStatement (EWhen r e1 e2) pts       = undefined -- When statement
+evalStatement (EImp a r es) pts         = undefined
+evalStatement (EDel user1 user2 e) pts  = undefined
+evalStatement (EValue v) pts            = undefined --do return v 
+evalStatement (EVar a) pts              = undefined --do lookupBinding a
+evalStatement (EGroup a as) pts         = undefined 
+-- evalStatement (EGroup a as) pts     = do
+--     g <- evalGroup as
+--     withBinding a g pts 
 
 -- policy expression: Need to check that all languages are in options
-evalStatement (EPol ps) pts         = do return ps
+evalStatement (EPol ps) pts             = undefined --do return ps
 
 -- policy template
-evalStatement (EPolTmp a pol) pts     = do 
-    withBinding a (VPol pol)
-
-evalStatement (EPred a ps) pts      = do
-    -- predicate a = {a, x = {policy}; a, y = {policy2}}
-    -- temp binding of a 
-    -- resault = group where predicate holds
-    g <- evalPredicate a ps
-    withBinding a (VGroup g) 
+evalStatement (EPolTmp a (EPol pol)) pts = undefined 
+-- evalStatement (EPolTmp a (EPol pol)) pts     = do 
+--     withBinding a (VPol pol)
+--     return pts
+evalStatement (EPred a ps) pts      = undefined
 
 -- MISSING: Needs work
-withBinding :: Atom -> Value -> RunEnv a -> RunEnv ()
-withBinding name val m = do
-    b <- M.insert name val
-    modify b
+-- withBinding :: Atom -> Value -> RunEnv a -> RunEnv ()
+withBinding :: Atom -> Value -> RunEnv ()
+withBinding name val = do
+    lift . modify $ M.insert name val 
 
-lookupBinding :: Atom -> RunEnv a -> Value
-lookupBinding a env = do
-    case M.lookup a (get env) of
-        Just (_, value) -> return value 
-        _ -> 
-            throwError $ NoBindingForVariable a
 
+lookupBinding :: Atom -> RunEnv Value
+lookupBinding a = undefined
+    -- -- v <- liftM <$> gets (M.lookup a)
+    
+    -- -- case lift <$> gets (M.lookup a) of
+    -- case liftM <$> gets (M.lookup a) of
+    --     Just r -> return r
+    --     Nothing -> undefined-- throwError $ NoBindingForVariable a
+    --     -- Just value -> return  value 
+    --     -- _ -> 
+    --     --     -- throwError $ NoBindingForVariable a
+    --     --     undefined -- MISSING: Throw error 
 
 ---- Evaluations
 evalGroup :: [Atom] -> Value
@@ -104,7 +91,7 @@ evalGroup = VGroup
 
 -- Pred Atom Atom Expression
 evalPredicate :: Atom -> [Pred] -> PreTrustStore -> RunEnv()
-evalPredicate a (Pred x y pol) pts = undefined --do
+evalPredicate a (Pred x y pol:preds) pts = undefined --do
     -- r <- TPL.performComputation a y getTypeTable (toTrustStore pts) 
     -- case r == pol of
     --     -- True ->  
@@ -125,8 +112,26 @@ evalPredicate a (Pred x y pol) pts = undefined --do
 --             remove x pGroup # Remove user from result as predicate is not met
 -- return pGroup
 
+-------------------
+--- Delegations ---
+-------------------
+evalDelegations :: Atom -> Atom -> Expression -> RunEnv()
+evalDelegations i1 i2 exp = undefined
 
+-- evalStatement (EDel user1 user2 d e) pts  = do -- delegation
+-- -- Every user who has made delegations gets put into a user list in the state
+--     -- type Delegation = (Identity, Identity, PrePolicies)
+--     -- type PrePolicy   = Either Bool [(ATag, ALang)]
+--     -- type PrePolicies = [PrePolicy]
+--     -- performDelegation :: Delegation -> TrustStore -> TypeTable -> Result TrustStore
 
+--     -- add user1 to list
+--     -- add user2 to list
+--     -- perform delegation
+--     ts <- TPL.performDelegation (user1, user2, evalStatement e) (toTrustStore pts) getTypeTable
+--     -- Or place in preTrustStore
+--     return ()
+--     -- MISSING: Group delegations
 
 
 

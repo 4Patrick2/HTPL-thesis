@@ -10,6 +10,8 @@ import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import qualified Data.Text as T
 import GHC.Base (undefined)
+import qualified Data.Map.Strict        as M
+import AST (ALang)
 
 -- Parser monad
 type Parser = ReaderT [T.Text] (Parsec Void T.Text)
@@ -67,36 +69,67 @@ tag = lexeme $ T.pack <$> tag'
 tag' :: Parser String
 tag' = (:) <$> upperChar <*> many alphaNumChar <|> fail "Aspect tag not properly formattet."
 
+-- language :: Parser ALang
+-- language = try (do
+--     f <- aLang
+--     s <- brackets aLang
+--     _ <- dot
+--     TDNS f s <$> aLang)
+--     <|> try (do
+--     f <- aLang
+--     s <- brackets aLang
+--     return $ TDNS f s (Degree Low))
+--     <|> try (do
+--     f <- aLang
+--     _ <- dot
+--     TDNS f (Degree Low) <$> aLang)
+--     <|> try (do
+--     f <- aLang
+--     return $ TDNS f (Degree Low) (Degree Low))
+--     <|> 
+--     fail "Language expression not well formed"
+
+-- TDNS ( (Node (Atom "")) (Leaf ) (Leaf ) )
 language :: Parser ALang
-language = try (do
+language = try ( do
     f <- aLang
     s <- brackets aLang
     _ <- dot
-    TDNS f s <$> aLang)
+    t <- aLang
+    return $ TDNS ( Node f (Leaf s) (Leaf t) ))
     <|> try (do
     f <- aLang
     s <- brackets aLang
-    return $ TDNS f s (Degree Low))
+    return $ TDNS $ Node f (Leaf s) (Leaf LTop) )
     <|> try (do
     f <- aLang
     _ <- dot
-    TDNS f (Degree Low) <$> aLang)
+    t <- aLang
+    return $ TDNS $ Node f (Leaf LTop) (Leaf t) )
     <|> try (do
     f <- aLang
-    return $ TDNS f (Degree Low) (Degree Low))
-    <|> 
-    fail "Language expression not well formed"
+    return $ TDNS $ Node f (Leaf LTop) (Leaf LTop) ) 
+    <|>
+    fail "Language expression not well formed."
 
 -- test[].test
 -- test[]
 -- test
 -- test.test
 
-aLang :: Parser Lang
+-- aLang :: Parser Lang
+-- aLang = do --lexeme $ do
+--     symbol "*"; return $ Degree High
+--     <|> do
+--     symbol "_"; return $ Degree Low
+--     <|> do
+--     Atom <$> atom
+
+aLang :: Parser ALang
 aLang = do --lexeme $ do
-    symbol "*"; return $ Degree High
+    symbol "*"; return LTop
     <|> do
-    symbol "_"; return $ Degree Low
+    symbol "_"; return LBot
     <|> do
     Atom <$> atom
 
@@ -117,38 +150,51 @@ predicate = do
     to   <- atom; colon
     Pred from to <$> pPolicy
 
-degree :: Parser Degree
-degree = 
-        try (do comma; symbol "*";     return High)
-    <|> try (do comma; pString "high"; return High)
-    <|> try (do comma; symbol "_";     return Low)
-    <|> try (do comma; pString "low";  return Low)
-    <|>      do                        return High
-
-    --     do comma; symbol "*";     return High
-    -- <|> do comma; pString "high"; return High
-    -- <|> do comma; symbol "_";     return Low
-    -- <|> do comma; pString "low";  return Low
-    -- <|> do  
+-- degree :: Parser Degree
+-- degree = 
+--         try (do comma; symbol "*";     return High)
+--     <|> try (do comma; pString "high"; return High)
+--     <|> try (do comma; symbol "_";     return Low)
+--     <|> try (do comma; pString "low";  return Low)
+--     <|>      do                        return High
 
 
 --------------------------
 --- Policy expressions ---
 --------------------------
+-- pPolicy :: Parser Expression
+-- pPolicy = do
+--     pol <- braces pols
+--     return $ EPol pol
+--    <|> do EVar <$> atom
+
+-- pols :: Parser [Pol]
+-- pols = sepBy1 pol comma
+
+-- pol :: Parser Pol
+-- pol = do
+--     t <- tag; colon
+--     Pol t <$> language
+
 pPolicy :: Parser Expression
 pPolicy = do
-    pol <- braces pols
+    pol <- braces policy_
     return $ EPol pol
    <|> do EVar <$> atom
 
-pols :: Parser [Pol]
-pols = sepBy1 pol comma
-
-pol :: Parser Pol
+pol :: Parser (ATag, ALang)
 pol = do
     t <- tag; colon
-    Pol t <$> language
+    a <- language
+    return (t, a)
 
+policy_ :: Parser Policy
+policy_ = do
+    p <- M.fromList <$> pols
+    return $ Policy p
+
+pols :: Parser [(ATag, ALang)]
+pols = sepBy1 pol comma
 
 --------------------------
 ---     Relations      ---

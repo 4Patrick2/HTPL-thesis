@@ -12,6 +12,7 @@ import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import qualified Data.Text as T
 import GHC.Base (undefined)
+import qualified Data.Map.Strict        as M
 
 
 pNetwork :: Parser Network
@@ -37,19 +38,35 @@ pImport = do
 pLanguage :: Parser Language
 pLanguage = Language <$> pLangDef
 
-pLangDef :: Parser [Aspects]
-pLangDef = do
-    language <- sepBy aspect semicolon
-    _ <- dot
-    return language
-    <|> return []
+-- pLangDef :: Parser [Aspects]
+-- pLangDef = do
+--     language <- sepBy aspect semicolon
+--     _ <- dot
+--     return language
+--     <|> return []
 
-aspect :: Parser Aspects
-aspect = do
-    _ <- pString "lang"
-    atag <- tag 
+-- aspect :: Parser Aspects
+-- aspect = do
+--     _ <- pString "lang"
+--     atag <- tag 
+--     lang <- braces $ sepBy1 language comma
+--     return $ Aspect atag lang
+
+
+pLangDef :: Parser LanguageOptions
+pLangDef = do 
+    language <- M.fromList <$> sepBy pLangOption semicolon
+    _ <- dot 
+    return language
+    <|> return M.empty
+
+pLangOption :: Parser (ATag, [ALang])
+pLangOption = do
+    _ <- string "lang"
+    aTag <- tag
     lang <- braces $ sepBy1 language comma
-    return $ Aspect atag lang
+    return (aTag, lang)
+
 
 -- Parse Expression statements
 pExpressions :: Parser [Expression]
@@ -104,13 +121,19 @@ pImplication = do
     return $ EImp v r e 
 
 pDelegation :: Parser Expression
+-- pDelegation = do
+--     pString "trust"; symbol "("; 
+--     from <- atom; comma
+--     to <- atom
+--     degree <- degree; symbol ")"
+--     pString "with"
+--     EDel from to degree <$> (pPolicy <|> pVariable)
 pDelegation = do
     pString "trust"; symbol "("; 
-    from <- atom; comma
-    to <- atom
-    degree <- degree; symbol ")"
+    from <- atom;    comma
+    to <- atom;      symbol ")"
     pString "with"
-    EDel from to degree <$> (pPolicy <|> pVariable)
+    EDel from to <$> (pPolicy <|> pVariable)
 
 pPolicyTemplate :: Parser Expression
 pPolicyTemplate = do
