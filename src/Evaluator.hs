@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Evaluator () where
 
@@ -10,9 +11,9 @@ import qualified Data.Map.Strict as M
 import qualified Data.MultiMap       as MM
 import Control.Monad (foldM)
 import GHC.Base (undefined)
-import Control.Monad.State
+import Control.Monad.State.Lazy
 import Common.AST
-import Control.Monad.Error
+import Control.Monad.Except
 
 
 --- Running the evaluator
@@ -72,17 +73,11 @@ withBinding name val = do
 
 
 lookupBinding :: Atom -> RunEnv Value
-lookupBinding a = undefined
-    -- -- v <- liftM <$> gets (M.lookup a)
-    
-    -- -- case lift <$> gets (M.lookup a) of
-    -- case liftM <$> gets (M.lookup a) of
-    --     Just r -> return r
-    --     Nothing -> undefined-- throwError $ NoBindingForVariable a
-    --     -- Just value -> return  value 
-    --     -- _ -> 
-    --     --     -- throwError $ NoBindingForVariable a
-    --     --     undefined -- MISSING: Throw error 
+lookupBinding a = do
+    t <- gets (M.lookup a)
+    case t of 
+        Just v -> return v
+        Nothing -> throwError $ NoBindingForVariable a -- MISSING: Is this a error?
 
 ---- Evaluations
 evalGroup :: [Atom] -> Value

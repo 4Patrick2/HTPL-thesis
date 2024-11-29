@@ -6,9 +6,9 @@ import AST
 import qualified TPL.API as TPL
 import qualified Data.Map.Strict as M
 import Control.Monad.Reader
-import Control.Monad.State
+import Control.Monad.State.Lazy
 import Control.Monad.Validate
-import Control.Monad.Error
+import Control.Monad.Except
 
 data Value = 
       VGroup [Atom]
@@ -28,7 +28,7 @@ type Environment = (LanguageOptions, TPL.TypeTable)
 -- Reader = Read only environment _B
 -- State = the state of bindings _B
 -- type ReaderStateError e r b a = ValidateT e (ReaderT r (State b)) a
-type ReaderStateError e r b a = ErrorT e (ReaderT r (State b)) a
+type ReaderStateError e r b a = ExceptT e (ReaderT r (State b)) a
 -- EnvironmentStateError
 
 type RunEnv a = ReaderStateError Errors Environment Bindings a
@@ -36,7 +36,7 @@ type RunEnv a = ReaderStateError Errors Environment Bindings a
 runRuntimeEnv :: RunEnv a -> Environment
                 -> Bindings -> (Either Errors a, Bindings)
 runRuntimeEnv action context = 
-  runState ( runReaderT (runErrorT action) context)
+  runState ( runReaderT (runExceptT action) context)
     -- runErrorT ( runState (runReaderT action context))
     -- runState (runReaderT (runValidateT action) context)
 
