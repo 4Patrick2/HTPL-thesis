@@ -10,10 +10,9 @@ import TPL.API as TPL
 import qualified Data.Map.Strict as M
 import qualified Data.MultiMap       as MM
 import Control.Monad (foldM)
-import GHC.Base (undefined)
 import Control.Monad.State.Lazy
-import Common.AST
 import Control.Monad.Except
+import Control.Monad.Error (MonadError(throwError))
 
 
 --- Running the evaluator
@@ -30,7 +29,8 @@ runEvaluator n env = undefined
 
 
 ----- Code from lars ------
-type PreTrustStore = MM.MultiMap (Atom, Atom) Common.AST.SuperPolicy
+-- type PreTrustStore = MM.MultiMap (Atom, Atom) Common.AST.SuperPolicy
+type PreTrustStore = MM.MultiMap (Atom, Atom) SuperPolicy
 -- | Simulating the delegations to be executed locally be each entity
 toTrustStore :: PreTrustStore -> TPL.TrustStore
 toTrustStore pstore = M.foldrWithKey ( \(i1, i2) pols acc ->
@@ -48,9 +48,9 @@ evalStatement (EIf r e1 e2) pts         = undefined -- if statement
 evalStatement (EWhen r e1 e2) pts       = undefined -- When statement
 evalStatement (EImp a r es) pts         = undefined
 evalStatement (EDel user1 user2 e) pts  = undefined
-evalStatement (EValue v) pts            = undefined --do return v 
+evalStatement (EValue v) pts            = undefined -- do return v 
 evalStatement (EVar a) pts              = undefined --do lookupBinding a
-evalStatement (EGroup a as) pts         = undefined 
+evalStatement (EGroup a as) pts         = undefined
 -- evalStatement (EGroup a as) pts     = do
 --     g <- evalGroup as
 --     withBinding a g pts 
@@ -59,7 +59,7 @@ evalStatement (EGroup a as) pts         = undefined
 evalStatement (EPol ps) pts             = undefined --do return ps
 
 -- policy template
-evalStatement (EPolTmp a (EPol pol)) pts = undefined 
+evalStatement (EPolTmp a (EPol pol)) pts = undefined
 -- evalStatement (EPolTmp a (EPol pol)) pts     = do 
 --     withBinding a (VPol pol)
 --     return pts
@@ -69,19 +69,22 @@ evalStatement (EPred a ps) pts      = undefined
 -- withBinding :: Atom -> Value -> RunEnv a -> RunEnv ()
 withBinding :: Atom -> Value -> RunEnv ()
 withBinding name val = do
-    lift . modify $ M.insert name val 
+    lift . modify $ M.insert name val
 
 
 lookupBinding :: Atom -> RunEnv Value
 lookupBinding a = do
     t <- gets (M.lookup a)
-    case t of 
+    case t of
         Just v -> return v
         Nothing -> throwError $ NoBindingForVariable a -- MISSING: Is this a error?
 
 ---- Evaluations
 evalGroup :: [Atom] -> Value
-evalGroup = VGroup 
+evalGroup = VGroup
+
+evalValue :: Int -> Value
+evalValue = VVal
 
 
 -- Pred Atom Atom Expression
@@ -110,8 +113,27 @@ evalPredicate a (Pred x y pol:preds) pts = undefined --do
 -------------------
 --- Delegations ---
 -------------------
-evalDelegations :: Atom -> Atom -> Expression -> RunEnv()
-evalDelegations i1 i2 exp = undefined
+evalPolicy :: Expression -> RunEnv Policy
+evalPolicy (EVar p) =  do 
+    v <- gets (M.lookup p)
+    case v of
+        Just (VPol pol) -> return pol
+        _ -> throwError $ NoBindingForPolicy p
+evalPolicy (EPol p) = do return p
+
+-- MISSING: Add users to list of users! 
+-- MISSING: Handle groups! 
+evalDelegations :: Atom -> Atom -> Expression -> PreTrustStore -> RunEnv PreTrustStore
+evalDelegations i1 i2 ePol pts = do
+    pol <- evalPolicy ePol
+    user2 <- gets (M.lookup i2)
+    case user2 of
+        Just v -> undefined -- Its a group
+
+        Nothing -> do-- its not a group
+            -- Lig det ind i pretruststore
+            -- Lav pol om til superpol -- Append til superPol eller overwrite???
+            return $ MM.insert (i1, i2) (SuperPolicy [pol]) pts
 
 -- evalStatement (EDel user1 user2 d e) pts  = do -- delegation
 -- -- Every user who has made delegations gets put into a user list in the state

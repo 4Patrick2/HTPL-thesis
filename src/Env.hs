@@ -14,7 +14,9 @@ data Value =
       VGroup [Atom]
     | VPol Policy
     | VVar Atom
-    deriving (Eq, Show, Read)
+    | VVal Int
+    deriving (Eq, Show)
+    -- deriving (Eq, Show, Read)
 
 type Bindings = M.Map Atom Value
 type Environment = (LanguageOptions, TPL.TypeTable)
@@ -52,4 +54,6 @@ data Errors =
       NoGroup
     | NoRelation
     | NoBindingForVariable Atom
-    deriving (Eq, Show, Read)
+    | NoBindingForPolicy Atom
+    deriving (Eq, Show)
+    -- deriving (Eq, Show, Read)

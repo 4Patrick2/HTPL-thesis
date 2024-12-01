@@ -1,9 +1,13 @@
 
-module AST (module AST) where
+module AST 
+  ( module AST
+  , module Common.AST
+  ) where
 
 import qualified Data.Map.Strict    as M
 import qualified Data.Text          as T
-
+import Common.AST 
+-- import Common.AST (SuperPolicy, Policy, Aspects, ALang, Tree, Ident)
 
 
 type Error = T.Text
@@ -14,20 +18,23 @@ type LExp  = T.Text
 type Atom  = T.Text
 -- type LangDef  = M.Map ATag ALang
 type FileName = T.Text -- File names
-type ATag     = T.Text -- Aspect Tags
+-- type ATag     = T.Text -- Aspect Tags
 
 
 --------------
 
 data Network = Network {imp :: [Import], lang :: Language, exps :: [Expression]}
-  deriving (Eq, Show, Read)
+  -- deriving (Eq, Show, Read)
+    deriving (Eq, Show)
 
 data Import = Imp {file :: FileName}
-  deriving (Eq, Show, Read)
+  deriving (Eq, Show)
+  -- deriving (Eq, Show, Read)
 
 -- data Language = Language { langDef :: [Aspects] }
 data Language = Language { langDef :: LanguageOptions }
-  deriving (Eq, Show, Read)
+  deriving (Eq, Show)
+  -- deriving (Eq, Show, Read)
 
 data Expression = 
       -- EDel Atom Atom Degree Expression
@@ -42,11 +49,13 @@ data Expression =
     | EImp Atom Relation [Expression] 
     | EPred Atom [Pred]
     | EGroup Atom [Atom]
-  deriving (Eq, Show, Read)
+  deriving (Eq, Show)
+  -- deriving (Eq, Show, Read)
 
 data Pred = 
       Pred Atom Atom Expression
-    deriving (Eq, Show, Read)
+    deriving (Eq, Show)
+    -- deriving (Eq, Show, Read)
 
 
 data Relation = 
@@ -54,10 +63,12 @@ data Relation =
     | RIn Atom VName 
     | RNot Relation 
     | RSize VName Op Int
-    deriving (Eq, Show, Read)
+    deriving (Eq, Show)
+    -- deriving (Eq, Show, Read)
 
 data Op = Less | Greater | Eq 
-  deriving (Eq, Show, Read)
+  deriving (Eq, Show)
+  -- deriving (Eq, Show, Read)
 
 type LanguageOptions = M.Map ATag [ALang]
 
@@ -90,27 +101,35 @@ type LanguageOptions = M.Map ATag [ALang]
 --- Needed for compatability ---
 --------------------------------
 
-newtype SuperPolicy = SuperPolicy {policies :: [Policy]}
-    deriving (Eq, Show, Read)
+-------- Imported from common.ast for better compatability 
 
-data Policy = Policy Aspects
-            | PBot | PTop
-    deriving (Eq, Show, Read)
+-- import Common.AST (SuperPolicy, Policy, Aspects, ALang, Tree, Ident)
 
-type Aspects = M.Map ATag ALang
+-- newtype SuperPolicy = SuperPolicy {policies :: [Policy]}
+--     deriving (Eq, Show, Read)
 
-data ALang = Atom Ident
-           | TDNS (Tree ALang)
-           | LTop | LBot
-    deriving (Eq, Show, Read)
+-- data Policy = Policy Aspects
+--             | PBot | PTop
+--     deriving (Eq, Show, Read)
 
-data Tree a = Node a
-              (Tree a) -- | Left tree
-              (Tree a) -- | Right tree
-            | Leaf a
-    deriving (Eq, Show, Read)
+-- type Aspects = M.Map ATag ALang
 
-type Ident = T.Text
+-- data ALang = Atom Ident
+--            | TDNS (Tree ALang)
+--            | LTop | LBot
+--     deriving (Eq, Show, Read)
+
+-- data Tree a = Node a
+--               (Tree a) -- | Left tree
+--               (Tree a) -- | Right tree
+--             | Leaf a
+--     deriving (Eq, Show, Read)
+
+-- type Ident = T.Text
+
+------------------------------------
+
+
 
 -- -- Simulator AST
 
