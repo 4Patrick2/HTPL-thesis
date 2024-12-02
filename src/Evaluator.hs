@@ -11,8 +11,11 @@ import qualified Data.Map.Strict as M
 import qualified Data.MultiMap       as MM
 import Control.Monad (foldM)
 import Control.Monad.State.Lazy
+import Control.Monad.Reader
 import Control.Monad.Except
-import Control.Monad.Error (MonadError(throwError))
+import GHC.Base (undefined)
+import Data.List ( nub )
+import qualified Data.Text              as T
 
 
 --- Running the evaluator
@@ -47,22 +50,27 @@ evalStatement :: Expression -> PreTrustStore -> RunEnv PreTrustStore
 evalStatement (EIf r e1 e2) pts         = undefined -- if statement
 evalStatement (EWhen r e1 e2) pts       = undefined -- When statement
 evalStatement (EImp a r es) pts         = undefined
-evalStatement (EDel user1 user2 e) pts  = undefined
+evalStatement (EDel user1 user2 e) pts  = do 
+    evalDelegations user1 user2 e pts
 evalStatement (EValue v) pts            = undefined -- do return v 
 evalStatement (EVar a) pts              = undefined --do lookupBinding a
-evalStatement (EGroup a as) pts         = undefined
--- evalStatement (EGroup a as) pts     = do
---     g <- evalGroup as
---     withBinding a g pts 
+-- Evaluation of a group statement. 
+-- Place the group in bindings and return PreTrustStore unaltered. 
+evalStatement (EGroup name members) pts     = do -- MISSING: What if group is predicate
+    group <- evalGroup members
+    withBinding name group
+    return pts
 
 -- policy expression: Need to check that all languages are in options
-evalStatement (EPol ps) pts             = undefined --do return ps
+evalStatement (EPol ps) pts             = do
+    _ <- evalPolicy (EPol ps)
+    return pts
 
--- policy template
-evalStatement (EPolTmp a (EPol pol)) pts = undefined
--- evalStatement (EPolTmp a (EPol pol)) pts     = do 
---     withBinding a (VPol pol)
---     return pts
+-- Policy template expression: Checks policy and adds to state. 
+evalStatement (EPolTmp a (EPol pol)) pts = do
+    evalPolicyTemplate a pol
+    return pts
+
 evalStatement (EPred a ps) pts      = undefined
 
 -- MISSING: Needs work
@@ -80,16 +88,84 @@ lookupBinding a = do
         Nothing -> throwError $ NoBindingForVariable a -- MISSING: Is this a error?
 
 ---- Evaluations
-evalGroup :: [Atom] -> Value
-evalGroup = VGroup
+evalGroup :: [Atom] -> RunEnv Value
+evalGroup g = return $ VGroup g
 
 evalValue :: Int -> Value
 evalValue = VVal
 
+----------------------------
+--- Predicate evaluation ---
+----------------------------
+
+performQuery :: Atom -> Atom -> PreTrustStore -> RunEnv SuperPolicy
+performQuery i1 i2 pts = do
+    -- res <- TPL.performComputation i1 i2 getTypeTable (toTrustStore pts)
+    typeTable <- getTypeTable
+    case TPL.performComputation i1 i2 typeTable (toTrustStore pts) of
+        Right sp -> return sp
+        _ -> throwError $ DefaultError "Problem with query."
+
+comparePolicies :: [Policy] -> Policy -> Bool
+comparePolicies = undefined
+
+comparePolicy :: Policy -> Policy -> [Atom] -> RunEnv Bool
+comparePolicy (Policy pol1) (Policy pol2) (key:keys) = do
+    -- keys <- M.keys pol2 -- We want to check up against policy 2
+    -- p1 <- M.lookup key pol1
+    -- TDNS ( Node f1 (Leaf s1) (Leaf t1) ) <- M.lookup key pol1
+
+    -- -- p2 <- M.lookup key pol2
+    -- TDNS ( Node f2 (Leaf s2) (Leaf t2) ) <- M.lookup key pol2
+
+    case M.lookup key pol1 of
+        Nothing -> throwError $ DefaultError "No keys in map"
+        Just (TDNS ( Node f1 (Leaf s1) (Leaf t1) )) -> do
+            case M.lookup key pol2 of
+                Nothing -> throwError $ DefaultError "No keys in map"
+                Just (TDNS ( Node f2 (Leaf s2) (Leaf t2) )) -> do
+                    case f1 == f2 of
+                        False -> return False
+                        True -> do
+                            case s1 == s2 || s1 == LTop of -- Top or Bot???? MISSING:
+                                False -> return False
+                                True -> case t1 == t2 || t1 == LTop of
+                                    False -> return False
+                                    True -> return True
 
 -- Pred Atom Atom Expression
-evalPredicate :: Atom -> [Pred] -> PreTrustStore -> RunEnv()
-evalPredicate a (Pred x y pol:preds) pts = undefined --do
+-- Pred X in { X, Poul: {Tag} }
+-- Pred Atom Atom Expression
+evalPredicate :: Atom -> [Pred] -> PreTrustStore -> PreTrustStore -- RunEnv()
+evalPredicate a (Pred x y pol:preds) pts = undefined
+-- evalPredicate a (Pred x y pol:preds) pts = do
+--     key <- createAtom "users"
+--     userList <- gets (M.lookup key)
+--     case userList of 
+--         Nothing -> return pts
+--         Just (VUsers l) -> undefined
+
+
+-- singlePredicate :: Atom -> Pred -> [Atom] -> PreTrustStore -> [Atom]
+-- singlePredicate x (Pred _x y (EPol (Policy as))) (user:users) pts = do
+--     queryRes <- performQuery user y pts
+--     -- evalute
+--     case queryRes <= as of
+--         True -> do -- Do include user
+--             return $ user : singlePredicate x (Pred x y polExp) users pts
+--         False -> do -- Dont include user
+--             return $ singlePredicate x (Pred x y polExp) users pts
+
+-- singlePredicate :: String -> Atom -> Policy -> [Atom] -> PreTrustStore -> [Atom]
+-- singlePredicate "sender" i2 policy (user:users) pts = do
+--     (SuperPolicy queryRes) <- performQuery user i2 pts
+--     case comparePolicies queryRes policy of 
+--         True -> do -- Do include user
+--             return $ user : singlePredicate "sender" i2 policy users pts
+--         False -> do -- Dont include user
+--             return $ singlePredicate "sender" i2 policy users pts
+
+--do
     -- r <- TPL.performComputation a y getTypeTable (toTrustStore pts) 
     -- case r == pol of
     --     -- True ->  
@@ -110,45 +186,96 @@ evalPredicate a (Pred x y pol:preds) pts = undefined --do
 --             remove x pGroup # Remove user from result as predicate is not met
 -- return pGroup
 
+-------------------------
+--- Policy Expression ---
+-------------------------
+evalPolicy :: Expression -> RunEnv Policy
+evalPolicy (EVar p) =  do
+    v <- gets (M.lookup p)
+    case v of
+        Just (VPol pol) ->
+            return pol
+        _ -> throwError $ NoBindingForPolicy p
+evalPolicy (EPol p) = do
+    _ <- checkPolicy p
+    return p
+
+-- Check all options are legal
+-- Return policy
+checkPolicy :: Policy -> RunEnv Value
+checkPolicy PBot = undefined
+checkPolicy PTop = undefined
+checkPolicy (Policy aspects) = do
+    _ <- checkPolicy' (M.toList aspects) -- Check policy and discard result. Throws error if invalid.
+    return $ VPol (Policy aspects)
+
+
+checkPolicy' :: [(ATag, ALang)] -> RunEnv Bool
+checkPolicy' ((tag, lang):p) = do
+    langOptions <- getLanguageOptions
+    case M.lookup tag langOptions of
+        Just options -> do
+            (if lang `elem` options then (do checkPolicy' p)
+             else throwError $ NoLanguageOption tag lang)
+        Nothing -> throwError $ NoLanguageOption tag lang
+        -- Nothing -> return False
+checkPolicy' [] = return True
+
+
+evalPolicyTemplate :: Atom -> Policy -> RunEnv()
+evalPolicyTemplate name policy = do
+    _ <- checkPolicy policy -- Verify policy contains language options.
+    withBinding name (VPol policy) -- Bind policy to name.
+
 -------------------
 --- Delegations ---
 -------------------
-evalPolicy :: Expression -> RunEnv Policy
-evalPolicy (EVar p) =  do 
-    v <- gets (M.lookup p)
-    case v of
-        Just (VPol pol) -> return pol
-        _ -> throwError $ NoBindingForPolicy p
-evalPolicy (EPol p) = do return p
+
+createAtom :: String -> RunEnv Atom
+createAtom s = do return $ T.pack s
+
+addUser :: Atom -> RunEnv ()
+addUser user = do
+    key <- createAtom "users"
+    userList <- gets (M.lookup key)
+    case userList of
+        Just (VUsers l) -> do -- List already initialized
+            lift . modify $ M.insert key (VUsers (l++[user]))
+        Nothing ->
+            lift . modify $ M.insert key (VUsers [user])
+
+findPairs :: Atom -> [Atom] -> RunEnv [(Atom, Atom)]
+findPairs i1 group = do return $ map (\x -> (i1, x)) group
+
+
 
 -- MISSING: Add users to list of users! 
 -- MISSING: Handle groups! 
 evalDelegations :: Atom -> Atom -> Expression -> PreTrustStore -> RunEnv PreTrustStore
 evalDelegations i1 i2 ePol pts = do
     pol <- evalPolicy ePol
-    user2 <- gets (M.lookup i2)
-    case user2 of
-        Just v -> undefined -- Its a group
+    i1_group <- gets (M.lookup i2)
+    i2_group <- gets (M.lookup i2)
+    case i1_group of
+        -- Idendity 1 is a group
+        Just g1 -> do
+            throwError $ UnsupportedOperation "Groups can not delegate trust" -- TODO: Possibly implemment feature.
+        -- Idendity 1 is a user
+        Nothing -> do
+            addUser i1
+            case i2_group of
+                -- Idendity 2 is a group
+                Just (VGroup g2) -> do
+                    pairs <- findPairs i1 g2
+                    return $ foldl (dele pol) pts pairs
+                    where
+                        dele pol pts (i1,g_i2) = MM.insert (i1,g_i2) (SuperPolicy [pol]) pts
 
-        Nothing -> do-- its not a group
-            -- Lig det ind i pretruststore
-            -- Lav pol om til superpol -- Append til superPol eller overwrite???
-            return $ MM.insert (i1, i2) (SuperPolicy [pol]) pts
+                -- Idendity 2 is a user
+                Nothing -> do
+                    addUser i2
+                    return $ MM.insert (i1, i2) (SuperPolicy [pol]) pts
 
--- evalStatement (EDel user1 user2 d e) pts  = do -- delegation
--- -- Every user who has made delegations gets put into a user list in the state
---     -- type Delegation = (Identity, Identity, PrePolicies)
---     -- type PrePolicy   = Either Bool [(ATag, ALang)]
---     -- type PrePolicies = [PrePolicy]
---     -- performDelegation :: Delegation -> TrustStore -> TypeTable -> Result TrustStore
-
---     -- add user1 to list
---     -- add user2 to list
---     -- perform delegation
---     ts <- TPL.performDelegation (user1, user2, evalStatement e) (toTrustStore pts) getTypeTable
---     -- Or place in preTrustStore
---     return ()
---     -- MISSING: Group delegations
 
 
 

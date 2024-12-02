@@ -9,12 +9,15 @@ import Control.Monad.Reader
 import Control.Monad.State.Lazy
 import Control.Monad.Validate
 import Control.Monad.Except
+-- import qualified Data.Text              as T
 
 data Value = 
       VGroup [Atom]
     | VPol Policy
     | VVar Atom
     | VVal Int
+    | VUsers [Atom]
+    | VBool Bool
     deriving (Eq, Show)
     -- deriving (Eq, Show, Read)
 
@@ -47,7 +50,11 @@ getTypeTable :: RunEnv TPL.TypeTable
 getTypeTable = do lift $ asks snd
 
 getLanguageOptions :: RunEnv LanguageOptions
-getLanguageOptions = do lift $ asks fst
+getLanguageOptions = asks fst
+  -- langOptions <- lift $ asks fst
+  -- case langOptions of
+  --   Just options -> return options
+  --   Nothing -> throwError $ DefaultError "Issue with options"
 
 
 data Errors =
@@ -55,5 +62,8 @@ data Errors =
     | NoRelation
     | NoBindingForVariable Atom
     | NoBindingForPolicy Atom
+    | UnsupportedOperation String
+    | NoLanguageOption ATag ALang
+    | DefaultError String
     deriving (Eq, Show)
     -- deriving (Eq, Show, Read)
