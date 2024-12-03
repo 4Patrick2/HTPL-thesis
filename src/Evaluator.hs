@@ -18,21 +18,21 @@ import Data.List ( nub )
 import qualified Data.Text              as T
 
 
---- Running the evaluator
 
--- type Result a = Either RuntimeErrors a
-type Result a = Either Errors Environment
+type Result a = Either Errors a
 
 runEvaluator :: Network -> Environment -> Result (Bindings, TPL.TrustStore)
-runEvaluator n env = undefined
--- runEvaluator n env = do
---     let result = evalStatements (exps n)
---     return (gets , toTrustStore result)
+runEvaluator network env = do
+    let result = runRuntimeEnv (topEvaluation (exps network)) env M.empty
+        bindings = snd result
+    pts <- fst result
+    return (bindings, toTrustStore pts)
+
+
 
 
 
 ----- Code from lars ------
--- type PreTrustStore = MM.MultiMap (Atom, Atom) Common.AST.SuperPolicy
 type PreTrustStore = MM.MultiMap (Atom, Atom) SuperPolicy
 -- | Simulating the delegations to be executed locally be each entity
 toTrustStore :: PreTrustStore -> TPL.TrustStore
@@ -41,13 +41,17 @@ toTrustStore pstore = M.foldrWithKey ( \(i1, i2) pols acc ->
                       ) M.empty $ MM.toMap pstore
 ---------------------------
 
+topEvaluation :: [Expression] -> RunEnv PreTrustStore
+topEvaluation stmts = evalStatements stmts MM.empty
 
 
-evalStatements :: [Expression] -> PreTrustStore
-evalStatements stmts = undefined -- Go over every statement with environment
+evalStatements :: [Expression] -> PreTrustStore -> RunEnv PreTrustStore
+evalStatements (stmt:stmts) pts = do evalStatement stmt pts
+evalStatements [] pts = return pts
 
 evalStatement :: Expression -> PreTrustStore -> RunEnv PreTrustStore
-evalStatement (EIf r e1 e2) pts         = undefined -- if statement
+evalStatement (EIf r e1 e2) pts         = do 
+    evalIf r e1 e2 pts
 evalStatement (EWhen r e1 e2) pts       = undefined -- When statement
 evalStatement (EImp a r es) pts         = undefined
 evalStatement (EDel user1 user2 e) pts  = do
@@ -287,16 +291,9 @@ evalDelegations i1 i2 ePol pts = do
 --- Relations ---
 -----------------
 
--- data Relation = 
---       REval Atom Atom Expression
---     | RIn Atom VName 
---     | RNot Relation 
---     | RSize VName Op Int
---     deriving (Eq, Show)
-
 evalRelation :: Relation -> PreTrustStore -> RunEnv Bool
 evalRelation (REval i1 i2 exp) pts = do relationEval i1 i2 exp pts
-evalRelation (RIn id groupName) _pts = do relationIn id groupName 
+evalRelation (RIn id groupName) _pts = do relationIn id groupName
 evalRelation (RNot relation) pts = do
     res <- evalRelation relation pts
     return $ not res
@@ -330,6 +327,18 @@ relationSize groupName op size = do
                 Greater -> return (length group >  size)
                 Eq      -> return (length group == size)
         _ -> throwError $ DefaultError "Variable not a group"
+
+--------------------
+--- If statement ---
+--------------------
+-- EIf Relation [Expression] [Expression]
+evalIf :: Relation -> [Expression] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore-- PreTrustStore
+evalIf relation exps1 exps2 pts = do
+    r_res <- evalRelation relation pts
+    if r_res 
+        then (do evalStatements exps1 pts) 
+        else (do evalStatements exps2 pts) 
+
 
 --- Ting der skal styr på:
     -- state med variabler og 

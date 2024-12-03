@@ -19,8 +19,7 @@ data Value =
     | VUsers [Atom]
     | VBool Bool
     | VSuperPolicy [Policy]
-    deriving (Eq, Show)
-    -- deriving (Eq, Show, Read)
+  deriving (Eq, Show)
 
 type Bindings = M.Map Atom Value
 type Environment = (LanguageOptions, TPL.TypeTable)
