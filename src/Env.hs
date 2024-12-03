@@ -18,6 +18,7 @@ data Value =
     | VVal Int
     | VUsers [Atom]
     | VBool Bool
+    | VSuperPolicy [Policy]
     deriving (Eq, Show)
     -- deriving (Eq, Show, Read)
 
@@ -65,5 +66,6 @@ data Errors =
     | UnsupportedOperation String
     | NoLanguageOption ATag ALang
     | DefaultError String
+    | BadPredicate String
     deriving (Eq, Show)
     -- deriving (Eq, Show, Read)
