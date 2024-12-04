@@ -47,8 +47,9 @@ data Expression =
     | EVar Atom
     | EValue Int
     | EImp Atom Relation [Expression] 
-    | EPred Atom [Pred]
     | EGroup Atom [Atom]
+    | EPred Atom Atom [Pred]
+    -- | EPred Atom [Pred]
   deriving (Eq, Show)
   -- deriving (Eq, Show, Read)
 

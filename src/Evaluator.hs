@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-module Evaluator () where
+module Evaluator (runEvaluator) where
 
 import AST
 import Parser
@@ -46,11 +46,10 @@ topEvaluation stmts = evalStatements stmts MM.empty
 
 
 evalStatements :: [Expression] -> PreTrustStore -> RunEnv PreTrustStore
-evalStatements (stmt:stmts) pts = do evalStatement stmt pts
-evalStatements [] pts = return pts
+evalStatements stmts pts = foldM (flip evalStatement) pts stmts
 
 evalStatement :: Expression -> PreTrustStore -> RunEnv PreTrustStore
-evalStatement (EIf r e1 e2) pts         = do 
+evalStatement (EIf r e1 e2) pts         = do
     evalIf r e1 e2 pts
 evalStatement (EWhen r e1 e2) pts       = undefined -- When statement
 evalStatement (EImp a r es) pts         = undefined
@@ -75,7 +74,14 @@ evalStatement (EPolTmp a (EPol pol)) pts = do
     evalPolicyTemplate a pol
     return pts
 
-evalStatement (EPred a ps) pts      = undefined
+evalStatement (EPred binding a ps) pts      = do
+    key <- createAtom "users"
+    listOfUsers <- gets (M.lookup key)
+    case listOfUsers of
+        Just (VGroup users) -> do
+            evalPredicates binding a ps pts users
+            return pts
+        Nothing -> throwError $ DefaultError "No users in system"
 
 -- MISSING: Needs work
 -- withBinding :: Atom -> Value -> RunEnv a -> RunEnv ()
@@ -165,19 +171,19 @@ singlePredicate "sender" i2 policy (user:users) pts = do
         VBool False -> do
             singlePredicate "sender" i2 policy users pts
 
-evalPredicates :: Atom -> [Pred] -> PreTrustStore -> [Atom] -> RunEnv()
-evalPredicates a ((Pred x y (EPol pol)):preds) pts members
+evalPredicates :: Atom -> Atom -> [Pred] -> PreTrustStore -> [Atom] -> RunEnv()
+evalPredicates binding a ((Pred x y (EPol pol)):preds) pts members
     | x == y    = throwError $ BadPredicate "Predicate is ill-formed" -- Error?
     | a == x    = do -- Sender
         newMembers <- singlePredicate "sender" y pol members pts -- If y is it then reciver?
-        evalPredicates a preds pts newMembers
+        evalPredicates binding a preds pts newMembers
     | a == y    = do -- Receiver
         newMembers <- singlePredicate "receiver" y pol members pts
-        evalPredicates a preds pts newMembers
+        evalPredicates binding a preds pts newMembers
     | otherwise = undefined -- ???
-evalPredicates a [] pts members = do -- Return list or add to state using a as binding????
+evalPredicates binding a [] pts members = do -- Return list or add to state using a as binding????
     -- withBinding :: Atom -> Value -> RunEnv ()
-    withBinding a (VGroup members)
+    withBinding binding (VGroup members)
 
 
 -- users = [users]
@@ -335,9 +341,9 @@ relationSize groupName op size = do
 evalIf :: Relation -> [Expression] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore-- PreTrustStore
 evalIf relation exps1 exps2 pts = do
     r_res <- evalRelation relation pts
-    if r_res 
-        then (do evalStatements exps1 pts) 
-        else (do evalStatements exps2 pts) 
+    if r_res
+        then (do evalStatements exps1 pts)
+        else (do evalStatements exps2 pts)
 
 
 --- Ting der skal styr på:

@@ -62,7 +62,7 @@ pLangDef = do
 
 pLangOption :: Parser (ATag, [ALang])
 pLangOption = do
-    _ <- string "lang"
+    _ <- pString "lang"
     aTag <- tag
     lang <- braces $ sepBy1 language comma
     return (aTag, lang)
@@ -107,12 +107,6 @@ pWhen = do
     pString "otherwise"; e2 <- braces pExpressions
     return $ EWhen r e1 e2
 
-pPredicate :: Parser Expression
-pPredicate = do
-    pString "pred"; name <- atom -- Might need something else for this
-    pString "in";   p    <- braces preds
-    return $ EPred name p
-
 pImplication :: Parser Expression
 pImplication = do
     pString "for";   v <- parens atom
@@ -141,11 +135,30 @@ pPolicyTemplate = do
     name <- atom; equal
     EPolTmp name <$> pPolicy
 
+-- pGroup :: Parser Expression
+-- pGroup = do
+--     pString "group"; name    <- atom
+--     equal;           members <- brackets $ sepBy1 atom comma
+--     return $ EGroup name members
+
 pGroup :: Parser Expression
 pGroup = do
     pString "group"; name    <- atom
     equal;           members <- brackets $ sepBy1 atom comma
     return $ EGroup name members
+
+-- pPredicate :: Parser Expression
+-- pPredicate = do
+--     pString "pred"; name <- atom -- Might need something else for this
+--     pString "in";   p    <- braces preds
+--     return $ EPred name p
+
+pPredicate :: Parser Expression
+pPredicate = try (do
+    pString "group"; binding  <- atom; equal
+    pString "pred"; variable <- atom -- Might need something else for this
+    pString "in";   p    <- braces preds
+    return $ EPred binding variable p)
 
 -- data Expression = 
 --       EDel Atom Atom Degree Expression
