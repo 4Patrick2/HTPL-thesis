@@ -110,18 +110,11 @@ pWhen = do
 pImplication :: Parser Expression
 pImplication = do
     pString "for";   v <- parens atom
-    pString "where"; r <- relation
+    pString "where"; p <- braces preds -- r <- relation
     pString "do";    e <- braces pExpressions
-    return $ EImp v r e 
+    return $ EImp v p e 
 
 pDelegation :: Parser Expression
--- pDelegation = do
---     pString "trust"; symbol "("; 
---     from <- atom; comma
---     to <- atom
---     degree <- degree; symbol ")"
---     pString "with"
---     EDel from to degree <$> (pPolicy <|> pVariable)
 pDelegation = do
     pString "trust"; symbol "("; 
     from <- atom;    comma

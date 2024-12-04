@@ -37,19 +37,17 @@ data Language = Language { langDef :: LanguageOptions }
   -- deriving (Eq, Show, Read)
 
 data Expression = 
-      -- EDel Atom Atom Degree Expression
       EDel Atom Atom Expression
     | EIf Relation [Expression] [Expression]
     | EWhen Relation [Expression] [Expression]
     | EPolTmp Atom Expression
-    -- | EPol [Pol]
     | EPol Policy
     | EVar Atom
     | EValue Int
-    | EImp Atom Relation [Expression] 
+    | EImp Atom [Pred] [Expression] 
+    -- | EImp Atom Relation [Expression] 
     | EGroup Atom [Atom]
     | EPred Atom Atom [Pred]
-    -- | EPred Atom [Pred]
   deriving (Eq, Show)
   -- deriving (Eq, Show, Read)
 

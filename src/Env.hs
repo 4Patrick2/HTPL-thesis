@@ -66,5 +66,7 @@ data Errors =
     | NoLanguageOption ATag ALang
     | DefaultError String
     | BadPredicate String
+    | BadComparison 
+    | Debug [Atom]
     deriving (Eq, Show)
     -- deriving (Eq, Show, Read)
