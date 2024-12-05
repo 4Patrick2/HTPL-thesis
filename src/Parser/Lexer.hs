@@ -227,7 +227,7 @@ relation =
             RNot <$> relation
     <|> do  pString "eval";  symbol "("
             from <- atom;    comma
-            to   <- atom;    comma
+            to   <- atom;    colon
             pol  <- pPolicy; symbol")"
             return $ REval from to pol
     <|> try (do name <- atom

@@ -19,6 +19,7 @@ data Value =
     | VUsers [Atom]
     | VBool Bool
     | VSuperPolicy [Policy]
+    | VWhen [(Bool, Relation, [Expression], [Expression])] 
   deriving (Eq, Show)
 
 type Bindings = M.Map Atom Value
@@ -67,6 +68,6 @@ data Errors =
     | DefaultError String
     | BadPredicate String
     | BadComparison 
-    | Debug [Atom]
+    | Debug Value
     deriving (Eq, Show)
     -- deriving (Eq, Show, Read)

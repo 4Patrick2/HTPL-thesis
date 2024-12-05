@@ -46,12 +46,18 @@ topEvaluation stmts = evalStatements stmts MM.empty
 
 
 evalStatements :: [Expression] -> PreTrustStore -> RunEnv PreTrustStore
-evalStatements stmts pts = foldM (flip evalStatement) pts stmts
+-- evalStatements stmts pts = foldM (flip evalStatement) pts stmts --processWhen pts
+evalStatements (stmt:stmts) pts = do
+    -- newPts <- processWhen pts
+    whenPts <- processWhen pts
+    newPts <- evalStatement stmt whenPts
+    evalStatements stmts newPts
+evalStatements [] pts = processWhen pts
 
 evalStatement :: Expression -> PreTrustStore -> RunEnv PreTrustStore
 evalStatement (EIf r e1 e2) pts         = do
     evalIf r e1 e2 pts
-evalStatement (EWhen r e1 e2) pts       = undefined -- When statement
+evalStatement (EWhen r e1 e2) pts       = do evalWhen r e1 e2 pts -- When statement
 evalStatement (EImp a r es) pts         = do
     evalFor a r es pts
 evalStatement (EDel user1 user2 e) pts  = do
@@ -361,9 +367,8 @@ evalIf relation exps1 exps2 pts = do
 ---------------------
 --- For statement ---
 ---------------------
--- EImp Atom [Pred] [Expression] 
 evalFor :: Atom -> [Pred] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore
-evalFor x predicates expressions pts = do 
+evalFor x predicates expressions pts = do
     key <- createAtom "users"
     listOfUsers <- gets (M.lookup key)
     case listOfUsers of
@@ -374,15 +379,54 @@ evalFor x predicates expressions pts = do
         _ -> throwError $ DefaultError "Something went wrong!"
 
 
--- evalStatement (EPred binding a ps) pts      = do
---     key <- createAtom "users"
---     listOfUsers <- gets (M.lookup key)
---     case listOfUsers of
---         Just (VUsers users) -> do
---             evalPredicates binding a ps pts users
---             return pts
---         Nothing -> throwError $ DefaultError "No users in system"
---         _ -> throwError $ DefaultError "Something went wrong in predicate!"
+----------------------
+--- When Statement ---
+----------------------
+    -- | EIf Relation [Expression] [Expression]
+    -- | EWhen Relation [Expression] [Expression]
+    -- State = Tag="when" Value
+
+-- 
+evalWhen :: Relation -> [Expression] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore
+evalWhen relation exps1 exps2 pts = do
+    r_res <- evalRelation relation pts
+    new_pts <- evalIf relation exps1 exps2 pts
+    key <- createAtom "when"
+    whenProcess <- gets (M.lookup key)
+    let w = (r_res, relation, exps1, exps2) in do
+        case whenProcess of
+            Just (VWhen whens) -> do -- List already initialized
+                -- lift . modify $ M.insert key (VWhen (nub $ w:whens))
+                -- lift . modify $ M.insert key (VUsers (nub $ l++[user]))
+                _ <- withBinding key (VWhen (nub $ w:whens))
+                return new_pts
+            Nothing -> do
+                _ <- withBinding key (VWhen [w])
+                return new_pts
+
+processWhen :: PreTrustStore -> RunEnv PreTrustStore
+processWhen pts = do
+    key <- createAtom "when"
+    whenProcess <- gets (M.lookup key)
+    case whenProcess of
+        Nothing -> return pts
+        Just (VWhen whens) -> do
+            whenRerun whens pts
+
+whenRerun :: [(Bool, Relation, [Expression], [Expression])] -> PreTrustStore  -> RunEnv PreTrustStore
+whenRerun ((oldResult, relation, exps1, exps2):whens) pts = do
+    newResult <- evalRelation relation pts
+    if oldResult == newResult 
+        then 
+            whenRerun whens pts -- Nothing has changed.
+        else do
+            key <- createAtom "when"
+            _ <- withBinding key (VWhen (nub $ (newResult, relation, exps1, exps2):whens))
+            new_pts <- evalIf relation exps1 exps2 pts
+            whenRerun whens new_pts
+whenRerun [] pts = do return pts
+
+
 
 --- Ting der skal styr på:
     -- state med variabler og 
