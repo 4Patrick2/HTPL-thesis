@@ -36,7 +36,6 @@ import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import qualified Data.Text as T
-import GHC.Base (undefined)
 
 import Specification
 import Env
@@ -77,7 +76,3 @@ exp_trust = "trust(id2, id3) with {Tag: aspect1}."
 test1 = im ++ lan ++ exp_when_true
 
 test2 = "import file.lan. lang Tag {aspect1}. trust(id1, id2) with {Tag: aspect1}."
--- convertResult :: Pretty a => Either a b -> Either String b
--- convertResult e = case e of
---     Left err -> Left $ pretty err
---     Right res -> Right res

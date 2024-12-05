@@ -2,20 +2,33 @@
 
 module Specification (runSpecification) where
 
-import AST as T
+-- import AST as T
+import AST
 import Env
+import Parser
 import qualified TPL.API as TPL
 import qualified Data.Map.Strict as M
-import Common.AST 
-import AST (LanguageOptions)
+import Common.AST
+import Data.Text as T
+import Prelude as P
 
-runSpecification :: T.Language -> Environment
+runSpecification :: Language -> Environment
 -- runSpecification :: Either Import Language -> Either StaticErrors Environment
 runSpecification (Language spec) = specification spec
 -- runSpecification Left (Imp imp) = specification $ parseFile imp
 
-parseFile :: T.FileName -> [T.Aspects]
-parseFile = undefined
+-- parseFile :: FileName -> LanguageOptions
+-- parseFile filename = do
+--     content <- readFile (T.unpack filename)
+--     case runImportParser "" (T.pack (P.lines content)) of
+--         Left err -> print err
+--         Right languageOptions -> return languageOptions
+
+parseFile :: FileName -> [String]
+parseFile filename = do
+    content <- readFile (T.unpack filename)
+    let strings = P.lines content
+    return strings
 
 -- specification :: [T.Aspects] -> Environment
 -- specification l = (languageOptions l, makeTypeTable l)
@@ -28,10 +41,10 @@ specification l = (l, makeTypeTable l)
 --     where 
 --     extractTags (Aspect tag _options : as) = (tag, (TDNST (LeafT Atomic), LBot)) : extractTags as
 --     extractTags [] = []
-makeTypeTable :: LanguageOptions -> M.Map Common.AST.ATag (Common.AST.ALangType, Common.AST.ALang)-- TPL.TypeTable 
+makeTypeTable :: LanguageOptions -> M.Map ATag (ALangType, ALang)-- TPL.TypeTable 
 makeTypeTable s = M.fromList $ extractTags $ M.keys s
-    where 
-    extractTags (tag : tags) = (tag, (TDNST (LeafT Atomic), Common.AST.LBot)) : extractTags tags
+    where
+    extractTags (tag : tags) = (tag, (TDNST (LeafT Atomic), LBot)) : extractTags tags
     extractTags [] = []
 
 

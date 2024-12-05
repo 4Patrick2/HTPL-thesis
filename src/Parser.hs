@@ -38,8 +38,9 @@ runParser p f c keywords =
 runNetworkParser :: String -> T.Text -> Either String Network
 runNetworkParser f s = runParser pNetwork f s reservedIdentifiers
 
-runImportParser :: String -> T.Text -> Either String Relation
-runImportParser f s = runParser relation f s reservedIdentifiers
+runImportParser :: String -> T.Text -> Either String LanguageOptions
+runImportParser f s = runParser pLangDef f s reservedIdentifiers
+
 
 
 
