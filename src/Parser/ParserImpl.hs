@@ -17,7 +17,7 @@ import qualified Data.Map.Strict        as M
 
 pNetwork :: Parser Network
 -- pNetwork = Network <$> pImports <*> pLanguage
-pNetwork = Network <$> pImports <*> pLanguage <*> pExpressions
+pNetwork = Network <$> pImports <*> pLanguage <*> pExpressionsTop
 
 
 -- Parse import statements
@@ -38,25 +38,10 @@ pImport = do
 pLanguage :: Parser Language
 pLanguage = Language <$> pLangDef
 
--- pLangDef :: Parser [Aspects]
--- pLangDef = do
---     language <- sepBy aspect semicolon
---     _ <- dot
---     return language
---     <|> return []
-
--- aspect :: Parser Aspects
--- aspect = do
---     _ <- pString "lang"
---     atag <- tag 
---     lang <- braces $ sepBy1 language comma
---     return $ Aspect atag lang
-
-
 pLangDef :: Parser LanguageOptions
-pLangDef = do 
+pLangDef = do
     language <- M.fromList <$> sepBy pLangOption semicolon
-    _ <- dot 
+    _ <- dot
     return language
     <|> return M.empty
 
@@ -67,17 +52,22 @@ pLangOption = do
     lang <- braces $ sepBy1 language comma
     return (aTag, lang)
 
-
--- Parse Expression statements
-pExpressions :: Parser [Expression]
-pExpressions = try (do
-    exps <- sepBy pExpression semicolon
+-- Parse Expression statements. End with period.
+pExpressionsTop :: Parser [Expression]
+pExpressionsTop = try (do
+    exps <- pExpressions
     _ <- dot
     return exps)
     <|> return []
 
+-- Parse Expression statements. End without period. Used within conditions. 
+pExpressions :: Parser [Expression]
+pExpressions = try (do
+    sepBy pExpression semicolon)
+    <|> return []
+
 pExpression :: Parser Expression
-pExpression = choice [   
+pExpression = choice [
         pPolicyTemplate
     ,   pWhen
     ,   pIf
@@ -91,77 +81,52 @@ pExpression = choice [
 
 -- MISSING: Can not be in keywords 
 pVariable :: Parser Expression
-pVariable = EVar <$> atom
+pVariable = EVar <$> variable
 
 pIf :: Parser Expression
 pIf = do
-    pString "if";  r  <- parens relation
+    pString "if";   r  <- parens relation
     pString "then"; e1 <- braces pExpressions
     pString "else"; e2 <- braces pExpressions
     return $ EIf r e1 e2
 
 pWhen :: Parser Expression
 pWhen = do
-    pString "when";      r  <- relation
+    pString "when";      r  <- parens relation
     pString "do";        e1 <- braces pExpressions
     pString "otherwise"; e2 <- braces pExpressions
     return $ EWhen r e1 e2
 
 pImplication :: Parser Expression
 pImplication = do
-    pString "for";   v <- parens atom
-    pString "where"; p <- braces preds -- r <- relation
+    pString "for";   v <- variable
+    pString "where"; p <- braces preds
     pString "do";    e <- braces pExpressions
-    return $ EImp v p e 
+    return $ EImp v p e
 
 pDelegation :: Parser Expression
 pDelegation = do
-    pString "trust"; symbol "("; 
-    from <- atom;    comma
-    to <- atom;      symbol ")"
+    pString "trust"; symbol "(";
+    from <- userOrVariable;    comma
+    to <- userOrVariable;      symbol ")"
     pString "with"
     EDel from to <$> (pPolicy <|> pVariable)
 
 pPolicyTemplate :: Parser Expression
 pPolicyTemplate = do
     pString "policy"
-    name <- atom; equal
+    name <- variable; equal
     EPolTmp name <$> pPolicy
-
--- pGroup :: Parser Expression
--- pGroup = do
---     pString "group"; name    <- atom
---     equal;           members <- brackets $ sepBy1 atom comma
---     return $ EGroup name members
 
 pGroup :: Parser Expression
 pGroup = do
-    pString "group"; name    <- atom
-    equal;           members <- brackets $ sepBy1 atom comma
+    pString "group"; name    <- variable
+    equal;           members <- brackets $ sepBy1 user comma
     return $ EGroup name members
-
--- pPredicate :: Parser Expression
--- pPredicate = do
---     pString "pred"; name <- atom -- Might need something else for this
---     pString "in";   p    <- braces preds
---     return $ EPred name p
 
 pPredicate :: Parser Expression
 pPredicate = try (do
-    pString "group"; binding  <- atom; equal
-    pString "pred"; variable <- atom -- Might need something else for this
+    pString "group"; binding  <- variable; equal
+    pString "pred";  variable <- variable 
     pString "in";   p    <- braces preds
     return $ EPred binding variable p)
-
--- data Expression = 
---       EDel Atom Atom Degree Expression
---     | EIf Relation [Expression] [Expression]
---     | EWhen Relation [Expression] [Expression]
---     | EPolTmp Atom Expression
---     | EPol [Pol]
---     | EVar Atom
---     | EValue Int
---     | EImp Atom Relation [Expression] 
---     | EPred Atom [Pred]
---     | EGroup Atom [Atom]
---   deriving (Eq, Show)

@@ -11,6 +11,8 @@ import qualified Data.Map.Strict as M
 import Common.AST
 import Data.Text as T
 import Prelude as P
+import GHC.Base (undefined)
+-- import Text.Megaparsec.String 
 
 runSpecification :: Language -> Environment
 -- runSpecification :: Either Import Language -> Either StaticErrors Environment
@@ -25,10 +27,15 @@ runSpecification (Language spec) = specification spec
 --         Right languageOptions -> return languageOptions
 
 parseFile :: FileName -> [String]
-parseFile filename = do
-    content <- readFile (T.unpack filename)
-    let strings = P.lines content
-    return strings
+parseFile filename = undefined
+-- parseFile filename = do
+    -- content <- readFile (T.unpack filename)
+    -- let strings = P.lines content
+    -- return strings
+    -- result <- parseFromFile runImportParser (T.unpack filename)
+    -- case result of
+    --     Left err -> undefined
+    --     Right -> undefined
 
 -- specification :: [T.Aspects] -> Environment
 -- specification l = (languageOptions l, makeTypeTable l)

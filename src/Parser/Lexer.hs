@@ -11,7 +11,7 @@ import qualified Text.Megaparsec.Char.Lexer as L
 import qualified Data.Text as T
 import GHC.Base (undefined)
 import qualified Data.Map.Strict        as M
-import AST (ALang)
+import Data.List (notElem)
 
 -- Parser monad
 type Parser = ReaderT [T.Text] (Parsec Void T.Text)
@@ -52,42 +52,70 @@ greater = symbol ">"
 equal   = symbol "="
 
 pString :: String -> Parser T.Text
-pString s = lexeme $ string (T.pack s)  
+pString s = lexeme $ string (T.pack s)
 
-------------------
+----------------
+--- Literals ---
+----------------
+
+reserved = ["if", "for", "else", "otherwise", "then", "when", "do", "policy", "where", "group", "pred", "trust", "eval"]
+
+tag :: Parser ATag
+-- tag = lexeme $ T.pack <$> checkKeyword tag'
+tag = lexeme $ do
+    t <- tag'
+    T.pack <$> checkKeyword t
+
+tag' :: Parser String
+tag' = (:) <$> upperChar <*> many tagTail <|> fail "Aspect tag not properly formattet."
+
+tagTail :: Parser Char
+tagTail = alphaNumChar <|> char '_'
+
+-- Variable name parsing.
+-- Begins with a capital letter which can be followed by any letter or number.
+variable :: Parser VName
+variable = lexeme $ T.pack <$> variable'
+
+variable' :: Parser String
+variable' = (:) <$> upperChar <*> many alphaNumChar <|> fail "Variable name ill-formed."
+
+-- User name parsing.
+-- Begins with a lower case letter followed by letters and numbers. 
+user :: Parser User
+user = lexeme $ do
+    u <- user'
+    T.pack <$> checkKeyword u
+
+user' :: Parser String
+user' = (:) <$> lowerChar <*> many alphaNumChar <|> fail "User name must begin with lower case character and can not contain special symbols."
+
+-- The filenames can contain any letter and number and must end using the suffix “.lan”.
+filename :: Parser FName
+filename = lexeme $ T.pack <$> filename'
 
 filename' :: Parser String
 filename' = lexeme $ someTill alphaNumChar (string ".lan") <|> fail "Filename not properly formattet."
 
-filename :: Parser T.Text
-filename = lexeme $ T.pack <$> filename'
+checkKeyword :: String -> Parser String
+checkKeyword word = do
+    if word `notElem` reserved then return word
+    else fail "Atom can not be a reserved keyword!"
 
--- type LangDef  = M.Map ATag ALang
-tag :: Parser ATag
-tag = lexeme $ T.pack <$> tag'
+-- Language expressions can begin with any alpha numeral. In HTPL language expressions are limited to the TDNS (Atomic) type.
+languageAtom :: Parser LanguageAtom
+languageAtom = lexeme $ do
+    atom <- languageAtom'
+    T.pack <$> checkKeyword atom
 
-tag' :: Parser String
-tag' = (:) <$> upperChar <*> many alphaNumChar <|> fail "Aspect tag not properly formattet."
+languageAtom' :: Parser String
+languageAtom' = (:) <$> letterChar <*> many atomTail <|> fail "Language expression not properly formed."
 
--- language :: Parser ALang
--- language = try (do
---     f <- aLang
---     s <- brackets aLang
---     _ <- dot
---     TDNS f s <$> aLang)
---     <|> try (do
---     f <- aLang
---     s <- brackets aLang
---     return $ TDNS f s (Degree Low))
---     <|> try (do
---     f <- aLang
---     _ <- dot
---     TDNS f (Degree Low) <$> aLang)
---     <|> try (do
---     f <- aLang
---     return $ TDNS f (Degree Low) (Degree Low))
---     <|> 
---     fail "Language expression not well formed"
+atomTail :: Parser Char
+atomTail = alphaNumChar <|> char '_' <|> char '-' <|> char '@' <|> char '$'
+
+userOrVariable :: Parser T.Text
+userOrVariable = try variable <|> try user <|> fail "Atom ill-formed."
 
 -- TDNS ( (Node (Atom "")) (Leaf ) (Leaf ) )
 language :: Parser ALang
@@ -108,22 +136,9 @@ language = try ( do
     return $ TDNS $ Node f (Leaf LTop) (Leaf t) )
     <|> try (do
     f <- aLang
-    return $ TDNS $ Node f (Leaf LTop) (Leaf LTop) ) 
+    return $ TDNS $ Node f (Leaf LTop) (Leaf LTop) )
     <|>
     fail "Language expression not well formed."
-
--- test[].test
--- test[]
--- test
--- test.test
-
--- aLang :: Parser Lang
--- aLang = do --lexeme $ do
---     symbol "*"; return $ Degree High
---     <|> do
---     symbol "_"; return $ Degree Low
---     <|> do
---     Atom <$> atom
 
 aLang :: Parser ALang
 aLang = do --lexeme $ do
@@ -131,56 +146,28 @@ aLang = do --lexeme $ do
     <|> do
     symbol "_"; return LBot
     <|> do
-    Atom <$> atom
+    Atom <$> languageAtom
 
--- MISSING: Can not be in keywords
-atom :: Parser T.Text
-atom = lexeme $ T.pack <$> atom'
-
-atom' :: Parser String 
-atom' = (:) <$> letterChar <*> many alphaNumChar
 
 
 preds :: Parser [Pred]
 preds = sepBy1 predicate semicolon
 
 predicate :: Parser Pred
-predicate = do 
-    from <- atom; comma
-    to   <- atom; colon
+predicate = do
+    from <- userOrVariable; comma
+    to   <- userOrVariable; colon
     Pred from to <$> pPolicy
-
--- degree :: Parser Degree
--- degree = 
---         try (do comma; symbol "*";     return High)
---     <|> try (do comma; pString "high"; return High)
---     <|> try (do comma; symbol "_";     return Low)
---     <|> try (do comma; pString "low";  return Low)
---     <|>      do                        return High
-
 
 --------------------------
 --- Policy expressions ---
 --------------------------
--- pPolicy :: Parser Expression
--- pPolicy = do
---     pol <- braces pols
---     return $ EPol pol
---    <|> do EVar <$> atom
-
--- pols :: Parser [Pol]
--- pols = sepBy1 pol comma
-
--- pol :: Parser Pol
--- pol = do
---     t <- tag; colon
---     Pol t <$> language
 
 pPolicy :: Parser Expression
 pPolicy = do
     pol <- braces policy_
     return $ EPol pol
-   <|> do EVar <$> atom
+   <|> do EVar <$> variable
 
 pol :: Parser (ATag, ALang)
 pol = do
@@ -201,43 +188,26 @@ pols = sepBy1 pol comma
 --------------------------
 
 operator :: Parser Op
-operator = lexeme $ 
+operator = lexeme $
         do less;         return Less
     <|> do greater;      return Greater
     <|> do equal; equal; return Eq
 
 relation :: Parser Relation
--- relation = 
---         try (do pString "eval";  symbol "("
---                 from <- atom;    comma
---                 to   <- atom;    comma
---                 pol  <- pPolicy; symbol")"
---                 return $ REval from to pol)
---     <|> try (do name <- atom
---                 pString "in"
---                 RIn name <$> atom)
---     <|> try (do group <- atom
---                 op <- operator
---                 RSize group op <$> integer)
---     <|> do pString "not "
---            RNot <$> relation
-
-relation = 
+relation =
         do  pString "not"
             RNot <$> relation
-    <|> do  pString "eval";  symbol "("
-            from <- atom;    comma
-            to   <- atom;    colon
-            pol  <- pPolicy; symbol")"
+    <|> do  pString "eval";     symbol "("
+            from <- user;       comma
+            to   <- user;       equal
+            pol  <- pPolicy;    symbol ")"
             return $ REval from to pol
-    <|> try (do name <- atom
+    <|> try (do name <- variable
                 pString "in"
-                RIn name <$> atom)
-    <|> try (do group <- atom
+                RIn name <$> variable)
+    <|> try (do group <- variable
                 op <- operator
                 RSize group op <$> integer)
     <|> fail "Relation not properly formattet."
-
---------------------------
 
 

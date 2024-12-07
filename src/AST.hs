@@ -16,9 +16,9 @@ type VName = T.Text
 type FName = T.Text
 type LExp  = T.Text
 type Atom  = T.Text
--- type LangDef  = M.Map ATag ALang
-type FileName = T.Text -- File names
--- type ATag     = T.Text -- Aspect Tags
+type User  = T.Text
+type LanguageAtom = T.Text
+type FileName     = T.Text -- File names
 
 
 --------------

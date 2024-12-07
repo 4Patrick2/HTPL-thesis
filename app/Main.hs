@@ -60,19 +60,19 @@ main =
                         Right res -> print res 
 
 im = "import language.lan."
-lan = "lang Tag {aspect1, aspect1[leaf1], aspect1.leaf2, aspect2}; lang Music {Pop, rock, rock.alternative, rock.heavy}."
+lan = "lang Tag_ {aspect1, aspect1[leaf1], aspect1.leaf2, aspect2@_-$}; lang Music {Pop, rock, rock.alternative, rock.heavy}."
 expres = "trust(id1, id2) with {Tag: aspect1}; trust(id2, id3) with {Tag: aspect1[leaf1]}."
 -- expres = "group One = [id1, id2, id3]; trust(id2, id3) with {Tag: aspect1[leaf1]}; trust(id1, id2) with {Tag: aspect1}."
-exp_if = "group One = [id1, id2, id3]; if (id4 in One) then {trust(id1, id2) with {Tag: aspect1}.} else {trust(id1, id2) with {Tag: aspect2}.}."
+exp_if = "group One = [id1, id2, id3]; if (id4 in One) then {trust(id1, id2) with {Tag: aspect1}} else {trust(id1, id2) with {Tag: aspect2}}."
 exp_if_eval = "trust(id1, id2) with {Tag: aspect1}; if (eval(id1,id2: {Tag: aspect1})) then {trust(id1, id3) with {Tag: aspect1}.} else {trust(id1, id3) with {Tag: aspect2}.}."
 exp_group = "group One = [id2, id3]; trust(One, id1) with {Tag: aspect1}."
 exp_pred = "group One = [id2, id3]; trust(id1, One) with {Tag: aspect1}; group Two = pred X in {id1, X: {Tag: aspect1}}; trust(Two, id1) with {Tag: aspect2}."
 exp_pred2 = "group One = [id2, id3]; trust(One, id1) with {Tag: aspect1}; group Two = pred X in {X, id1: {Tag: aspect1}}; trust(id1, Two) with {Tag: aspect2}."
 exp_tmp = "policy Pol = {Tag: aspect1.leaf2}; trust(id1, id2) with Pol."
 exp_for = "group One = [id2, id3];  trust(id1, One) with {Tag: aspect1}; for (X) where {id1, X: {Tag: aspect1}} do  {trust(X, id1) with {Tag: aspect2}.}."
-exp_when_false = "when eval(id1,id2: {Tag: aspect1}) do {trust(id2, id3) with {Tag: aspect1}.} otherwise {trust(id2, id3) with {Tag: aspect2}.}."
-exp_when_true = "when eval(id1,id2: {Tag: aspect1}) do {trust(id2, id3) with {Tag: aspect1}.} otherwise {trust(id2, id3) with {Tag: aspect2}; trust(id1,id2) with {Tag: aspect1}.}."
-exp_trust = "trust(id2, id3) with {Tag: aspect1}."
-test1 = im ++ lan ++ exp_when_true
+exp_when_false = "when (eval(id1,id2: {Tag: aspect1})) do {trust(id2, id3) with {Tag: aspect1}} otherwise {trust(id2, id3) with {Tag: aspect2}}."
+exp_when_true = "when (eval(id1,id2: {Tag: aspect1})) do {trust(id2, id3) with {Tag: aspect1}} otherwise {trust(id2, id3) with {Tag: aspect2}; trust(id1,id2) with {Tag: aspect1}}."
+exp_trust = "trust(id2, id3) with {Tag_: aspect2@_-$}."
+test1 = im ++ lan ++ exp_trust
 
 test2 = "import file.lan. lang Tag {aspect1}. trust(id1, id2) with {Tag: aspect1}."
