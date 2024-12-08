@@ -3,6 +3,7 @@
 module Parser 
     ( runNetworkParser
     , runTestParser
+    , runImportParser
     ) where
 
 import AST
@@ -23,3 +24,9 @@ runNetworkParser f s = runParser pNetwork f s
 
 runTestParser :: String -> T.Text -> Either String LanguageOptions
 runTestParser f s = runParser pLangDef f s 
+
+runImportParser :: String -> T.Text -> Either String [Import]
+runImportParser f s = --runParser pImports f s 
+    case P.parse pImports f s of 
+        Left err -> Left $ P.errorBundlePretty err
+        Right r -> Right r 

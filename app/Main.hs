@@ -48,16 +48,20 @@ main = do
     case args of
         ["-f", file, id1, id2] -> do
             s <- readFile file
-            case (runNetworkParser "" (T.pack simple)) of 
+            case (runImportParser "" (T.pack s)) of
                 Left err -> print err
-                Right parse -> 
-                    let (l,tt) = runSpecification (lang parse) in
-                    case runEvaluator parse (l,tt) of
+                -- Right files -> print files
+                Right files -> do
+                    case (runNetworkParser "" (T.pack s)) of 
                         Left err -> print err
-                        Right (binds, ts) -> 
-                            case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
+                        Right parse -> 
+                            let (l,tt) = runSpecification (lang parse) in
+                            case runEvaluator parse (l,tt) of
                                 Left err -> print err
-                                Right res -> print res
+                                Right (binds, ts) -> 
+                                    case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
+                                        Left err -> print err
+                                        Right res -> print res
         _ -> die "Didnt work"
     
 -- interface: HTPL -f file.HTPL id2 id3
