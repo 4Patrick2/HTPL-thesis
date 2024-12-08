@@ -14,8 +14,7 @@ import qualified Data.Map.Strict        as M
 import Data.List (notElem)
 
 -- Parser monad
-type Parser = ReaderT [T.Text] (Parsec Void T.Text)
--- type Parser = Parsec Void T.Text
+type Parser = Parsec Void T.Text
 
 ------------------
 ---- Lexing 
@@ -30,7 +29,7 @@ symbol :: T.Text -> Parser T.Text
 symbol = L.symbol spaceConsumer
 
 integer :: Parser Int
-integer = lexeme $ do--lexeme L.decimal
+integer = lexeme $ do
     i <- many digitChar
     return $ read i
 
@@ -58,10 +57,12 @@ pString s = lexeme $ string (T.pack s)
 --- Literals ---
 ----------------
 
-reserved = ["if", "for", "else", "otherwise", "then", "when", "do", "policy", "where", "group", "pred", "trust", "eval"]
+-- Reserved keywords of HTPL. 
+reserved = ["if", "for", "else", "otherwise", "then", "when", "do", "policy", "where", "group", "pred", "trust", "eval", "lang"]
 
+-- Parsing Aspect tags.
+-- Must start with capital letter. Can not be a keyword.
 tag :: Parser ATag
--- tag = lexeme $ T.pack <$> checkKeyword tag'
 tag = lexeme $ do
     t <- tag'
     T.pack <$> checkKeyword t
@@ -102,7 +103,8 @@ checkKeyword word = do
     if word `notElem` reserved then return word
     else fail "Atom can not be a reserved keyword!"
 
--- Language expressions can begin with any alpha numeral. In HTPL language expressions are limited to the TDNS (Atomic) type.
+-- Language expressions can begin with any alpha numeral. 
+-- In HTPL language expressions are limited to the TDNS (Atomic) type.
 languageAtom :: Parser LanguageAtom
 languageAtom = lexeme $ do
     atom <- languageAtom'
@@ -117,7 +119,8 @@ atomTail = alphaNumChar <|> char '_' <|> char '-' <|> char '@' <|> char '$'
 userOrVariable :: Parser T.Text
 userOrVariable = try variable <|> try user <|> fail "Atom ill-formed."
 
--- TDNS ( (Node (Atom "")) (Leaf ) (Leaf ) )
+-- Parse langauge expression.
+-- Can only parse type TDNS(Atomic)
 language :: Parser ALang
 language = try ( do
     f <- aLang

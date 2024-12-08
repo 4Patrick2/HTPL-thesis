@@ -1,59 +1,52 @@
 -- Blackbox testing of parser
 {-# LANGUAGE OverloadedStrings        #-}
-{-# LANGUAGE DisambiguateRecordFields #-}
 
 import AST
--- import RunTime
 import Parser
-
-import Parser.ParserImpl
-import qualified Text.Megaparsec  as P
-import Text.Megaparsec.Char
-import qualified Text.Megaparsec.Char.Lexer as L
 
 import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Data.Text as T
-
-
-
-import Data.Either (isLeft)
 import qualified Data.Map.Strict as M
-convert (name, input, mout) f = testCase name $ case mout of
-    Nothing  -> isLeft (f input) @?= True
-    Just out -> f input @?= Right out
 
-convert' (name, input, output) f = testCase name $ f input @?= output
+main :: IO ()
+main = defaultMain $ localOption (mkTimeout 1000000) parserTests
 
+-- tests :: TestTree
+-- tests = parserTests ++ evaluatorTests
 
--- main :: IO ()
--- main = defaultMain $ localOption (mkTimeout 1000000) tests
+parserTests :: TestTree
+parserTests = testGroup "Parser tests" [
+    testCase "parse empty network" $ runNetworkParser "" "" @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = []}),
 
--- tests = testGroup "Parser tests" [
---     testCase "parse empty program" $ runNetworkParser "import file.lan." (T.pack "import file.lan.") @?=
---         Right (Network [Imp "file.lan"] (Language [])),
---     testCase "parse empty program" $ runNetworkParser "empty" (T.pack "\n") @?=
---         Right (Network {imp = [], lang = Language {langDef = []}}),
---     testCase "parse import ttest" $ runImportParser "import file.lan" (T.pack "import file.lan") @?=
---         Right (Imp "file.lan")
---     ]  
-tests :: [TestTree]
-tests = 
-    [
-        testGroup "Network parser" $ map (`convert` runImportParser "test") importCases
+    testCase "Single import" $ runNetworkParser "" "import testfile.lan." @?= 
+        Right (Network {imp = ["testfile.lan"], lang = Language {langDef = M.fromList []}, exps = []}),
+ 
+    testCase "Two imports import" $ runNetworkParser "" "import testfile.lan, import testfile2.lan." @?= 
+        Right (Network {imp = ["testfile.lan", "testfile2.lan"], lang = Language {langDef = M.fromList []}, exps = []}),
+    
+    testCase "Multiple imports import" $ runNetworkParser "" "import testfile.lan, import testfile2.lan, import testfile3.lan." @?= 
+        Right (Network {imp = ["testfile.lan", "testfile2.lan", "testfile3.lan"], lang = Language {langDef = M.fromList []}, exps = []}),
+    
+    testCase "Bad import file" $ runNetworkParser "" "import badfile.lang." @?= 
+        Left _,
+    
+    testCase "Simple language" $ runNetworkParser "" "lang Tag: {aspect1}" @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag", ["aspect1"])]}, exps = []}),
+
+    testCase "Multiple aspect tags" $ runNetworkParser "" "lang Tag1: {aspect1}; lang Tag2: {aspect2}" @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag1", ["aspect1"]), ("Tag2", ["aspect2"])]}, exps = []}),
+    "Simple language"
+    "Multiple tags language"
+    "Multiple options language"
+
+    "Import and language"
+
+    ""
+    
     ]
-
-importCases = 
-    [
-        ("Simple import", "import file.lan.", Just $ Imp {file = "file.lan"}),
-        ("Empty import", "", Just $ Imp {file = "file.lan"})
-    ]
-
-test = testGroup "Unit tests" $ concat
-    [ tests ]
-
-main = defaultMain test
-
--- "import file.lan; import file1.lan;import file4.lan;   import file3.lan . "
--- "lang Tag {test, test[gt], test.test, one[two].three}"
--- "lang Tag {fst}; lang Tag2 {snd}."
+-- evaluatorTests :: TestTree
+-- evaluatorTests = testGroup "Evaluator tests" [
+--     testCase 
+--     ]

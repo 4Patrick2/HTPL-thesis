@@ -194,18 +194,18 @@ evalPredicates :: Atom -> Atom -> [Pred] -> PreTrustStore -> [Atom] -> RunEnv()
 evalPredicates binding a ((Pred x y (EPol pol)):preds) pts members
     | x == y    = throwError $ BadPredicate "Predicate is ill-formed. Sender and receiver must be distinct."
     | a == x    = do -- Sender
-        newMembers <- singlePredicate "sender" y pol members pts -- If y is it then reciver?
+        newMembers <- singlePredicate "sender" y pol members pts 
         evalPredicates binding a preds pts newMembers
     | a == y    = do -- Receiver
         newMembers <- singlePredicate "receiver" x pol members pts
         evalPredicates binding a preds pts newMembers
     | otherwise = throwError $ BadPredicate "Predicate is ill-formed"
-evalPredicates binding a [] pts members = do -- Return list or add to state using a as binding????
-    -- withBinding :: Atom -> Value -> RunEnv ()
-    case length members of
-        0 -> throwError $ DefaultError "members empty"
-        _ -> do
-            withBinding binding (VGroup members)
+evalPredicates binding a [] pts members = do 
+    withBinding binding (VGroup members)
+    -- case length members of
+    --     0 -> throwError $ DefaultError "members empty"
+    --     _ -> do
+    --         withBinding binding (VGroup members)
 
 -------------------------
 --- Policy Expression ---

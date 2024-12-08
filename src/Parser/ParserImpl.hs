@@ -11,14 +11,15 @@ import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import qualified Data.Text as T
-import GHC.Base (undefined)
 import qualified Data.Map.Strict        as M
 
 
 pNetwork :: Parser Network
--- pNetwork = Network <$> pImports <*> pLanguage
 pNetwork = Network <$> pImports <*> pLanguage <*> pExpressionsTop
-
+-- pNetwork = do 
+--     network <- Network <$> pImports <*> pLanguage <*> pExpressionsTop
+--     eof
+--     return network
 
 -- Parse import statements
 pImports :: Parser [Import]
@@ -56,9 +57,14 @@ pLangOption = do
 pExpressionsTop :: Parser [Expression]
 pExpressionsTop = try (do
     exps <- pExpressions
-    _ <- dot
+    _ <- dot 
+    eof
     return exps)
-    <|> return []
+    <|> do
+    eof
+    return []
+    <|> 
+    fail "Did not reach the end of file during parsing."
 
 -- Parse Expression statements. End without period. Used within conditions. 
 pExpressions :: Parser [Expression]

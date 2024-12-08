@@ -43,21 +43,21 @@ import Evaluator
 import TPL.API as TPL
 
 main :: IO()
--- main = case (runImportParser "" (T.pack r)) of
---     Left err -> print err
---     Right r -> print r
+main = case (runNetworkParser "" (T.pack "")) of
+    Left err -> print err
+    Right r -> print r
 
-main =
-    case (runNetworkParser "" (T.pack test1)) of 
-        Left err -> print err
-        Right parse -> --do
-            let (l,tt) = runSpecification (lang parse) in
-            case runEvaluator parse (l,tt) of
-                Left err -> print err
-                Right (binds, ts) -> 
-                    case TPL.performComputation (T.pack "id2") (T.pack "id3") tt ts of
-                        Left err -> print err
-                        Right res -> print res 
+-- main =
+--     case (runNetworkParser "" (T.pack test1)) of 
+--         Left err -> print err
+--         Right parse -> --do
+--             let (l,tt) = runSpecification (lang parse) in
+--             case runEvaluator parse (l,tt) of
+--                 Left err -> print err
+--                 Right (binds, ts) -> 
+--                     case TPL.performComputation (T.pack "id2") (T.pack "id3") tt ts of
+--                         Left err -> print err
+--                         Right res -> print res 
 
 im = "import language.lan."
 lan = "lang Tag_ {aspect1, aspect1[leaf1], aspect1.leaf2, aspect2@_-$}; lang Music {Pop, rock, rock.alternative, rock.heavy}."
@@ -73,6 +73,8 @@ exp_for = "group One = [id2, id3];  trust(id1, One) with {Tag: aspect1}; for (X)
 exp_when_false = "when (eval(id1,id2: {Tag: aspect1})) do {trust(id2, id3) with {Tag: aspect1}} otherwise {trust(id2, id3) with {Tag: aspect2}}."
 exp_when_true = "when (eval(id1,id2: {Tag: aspect1})) do {trust(id2, id3) with {Tag: aspect1}} otherwise {trust(id2, id3) with {Tag: aspect2}; trust(id1,id2) with {Tag: aspect1}}."
 exp_trust = "trust(id2, id3) with {Tag_: aspect2@_-$}."
-test1 = im ++ lan ++ exp_trust
+exp_trust_with_more = "trust(id2, id3) with {Tag_: aspect2@_-$}. trust(id4,id6) with {Tag_: aspect1}"
+exp_empty = ""
+test1 = im ++ lan ++ exp_trust_with_more
 
 test2 = "import file.lan. lang Tag {aspect1}. trust(id1, id2) with {Tag: aspect1}."
