@@ -93,7 +93,7 @@ user' = (:) <$> lowerChar <*> many alphaNumChar <|> fail "User name must begin w
 
 -- The filenames can contain any letter and number and must end using the suffix “.lan”.
 filename :: Parser FName
-filename = lexeme $ T.pack <$> filename'
+filename = lexeme $ T.pack <$> filename' <|> fail "Filename not properly formattet."
 
 filename' :: Parser String
 filename' = lexeme $ someTill alphaNumChar (string ".lan") <|> fail "Filename not properly formattet."

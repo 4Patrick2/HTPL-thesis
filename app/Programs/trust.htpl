@@ -1,0 +1,1 @@
+lang Tag {aspect1}. trust(id1, id2) with {Tag: aspect1}.

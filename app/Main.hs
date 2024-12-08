@@ -43,9 +43,29 @@ import Evaluator
 import TPL.API as TPL
 
 main :: IO()
-main = case (runNetworkParser "" (T.pack "")) of
-    Left err -> print err
-    Right r -> print r
+main = do
+    args <- getArgs
+    case args of
+        ["-f", file, id1, id2] -> do
+            s <- readFile file
+            case (runNetworkParser "" (T.pack simple)) of 
+                Left err -> print err
+                Right parse -> 
+                    let (l,tt) = runSpecification (lang parse) in
+                    case runEvaluator parse (l,tt) of
+                        Left err -> print err
+                        Right (binds, ts) -> 
+                            case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
+                                Left err -> print err
+                                Right res -> print res
+        _ -> die "Didnt work"
+    
+-- interface: HTPL -f file.HTPL id2 id3
+
+
+-- main = case (runNetworkParser "" (T.pack simple)) of
+--     Left err -> print err
+--     Right r -> print r
 
 -- main =
 --     case (runNetworkParser "" (T.pack test1)) of 
@@ -75,6 +95,7 @@ exp_when_true = "when (eval(id1,id2: {Tag: aspect1})) do {trust(id2, id3) with {
 exp_trust = "trust(id2, id3) with {Tag_: aspect2@_-$}."
 exp_trust_with_more = "trust(id2, id3) with {Tag_: aspect2@_-$}. trust(id4,id6) with {Tag_: aspect1}"
 exp_empty = ""
+simple = "lang Tag {aspect1}. trust(id1, id2) with {Tag: aspect1}."
 test1 = im ++ lan ++ exp_trust_with_more
 
 test2 = "import file.lan. lang Tag {aspect1}. trust(id1, id2) with {Tag: aspect1}."

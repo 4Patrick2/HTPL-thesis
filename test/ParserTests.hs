@@ -10,43 +10,53 @@ import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 
 main :: IO ()
-main = defaultMain $ localOption (mkTimeout 1000000) parserTests
+main = defaultMain $ localOption (mkTimeout 1000000) tests
 
 -- tests :: TestTree
--- tests = parserTests ++ evaluatorTests
+tests = testGroup "Parser Tests" [parserTests, expressionTest]
 
 parserTests :: TestTree
-parserTests = testGroup "Parser tests" [
-    testCase "parse empty network" $ runNetworkParser "" "" @?=
+parserTests = testGroup "Imports and language" [
+    testCase "Empty network" $ runNetworkParser "" "" @?=
         Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = []}),
 
     testCase "Single import" $ runNetworkParser "" "import testfile.lan." @?= 
-        Right (Network {imp = ["testfile.lan"], lang = Language {langDef = M.fromList []}, exps = []}),
+        Right (Network {imp = [Imp {file = "testfile"}], lang = Language {langDef = M.fromList []}, exps = []}),
  
-    testCase "Two imports import" $ runNetworkParser "" "import testfile.lan, import testfile2.lan." @?= 
-        Right (Network {imp = ["testfile.lan", "testfile2.lan"], lang = Language {langDef = M.fromList []}, exps = []}),
+    testCase "Wrong seperation" $ runNetworkParser "" "import testfile.lan, import testfile2.lan." @?= 
+        Left "1:20:\n  |\n1 | import testfile.lan, import testfile2.lan.\n  |                    ^\nunexpected ','\nexpecting '.' or ';'\n",
+
+    testCase "Two imports import" $ runNetworkParser "" "import testfile.lan; import testfile2.lan." @?= 
+        Right (Network {imp = [Imp {file = "testfile"}, Imp {file = "testfile2"}], lang = Language {langDef = M.fromList []}, exps = []}),
     
-    testCase "Multiple imports import" $ runNetworkParser "" "import testfile.lan, import testfile2.lan, import testfile3.lan." @?= 
-        Right (Network {imp = ["testfile.lan", "testfile2.lan", "testfile3.lan"], lang = Language {langDef = M.fromList []}, exps = []}),
+    testCase "Multiple imports import" $ runNetworkParser "" "import testfile.lan; import testfile2.lan; import testfile3.lan." @?= 
+        Right (Network {imp = [Imp {file = "testfile"}, Imp {file = "testfile2"}, Imp {file = "testfile3"}], lang = Language {langDef = M.fromList []}, exps = []}),
     
     testCase "Bad import file" $ runNetworkParser "" "import badfile.lang." @?= 
-        Left _,
+        Left "1:19:\n  |\n1 | import badfile.lang.\n  |                   ^\nunexpected 'g'\nexpecting '.' or ';'\n",
     
-    testCase "Simple language" $ runNetworkParser "" "lang Tag: {aspect1}" @?=
-        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag", ["aspect1"])]}, exps = []}),
+    testCase "Simple language" $ runNetworkParser "" "lang Tag {aspect1}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag", [TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop))])]}, exps = []}),
 
-    testCase "Multiple aspect tags" $ runNetworkParser "" "lang Tag1: {aspect1}; lang Tag2: {aspect2}" @?=
-        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag1", ["aspect1"]), ("Tag2", ["aspect2"])]}, exps = []}),
-    "Simple language"
-    "Multiple tags language"
-    "Multiple options language"
-
-    "Import and language"
-
-    ""
+    testCase "Multiple aspect tags" $ runNetworkParser "" "lang Tag1 {aspect1}; lang Tag2 {aspect2}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag1", [TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop))]), ("Tag2", [TDNS (Node (Atom "aspect2") (Leaf LTop) (Leaf LTop))])]}, exps = []}),
+    
+    testCase "Multiple language options" $ runNetworkParser "" "lang Tag {aspect1, aspect2, aspect3}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag", [TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop)), TDNS (Node (Atom "aspect2") (Leaf LTop) (Leaf LTop)), TDNS (Node (Atom "aspect3") (Leaf LTop) (Leaf LTop))])]}, exps = []}),
+    
+    testCase "TDNS Expressions in language" $ runNetworkParser "" "lang Tag {aspect1, aspect1[leaf], aspect1.leaf2, aspect1[leaf1].leaf2}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag",[TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop)),TDNS (Node (Atom "aspect1") (Leaf (Atom "leaf")) (Leaf LTop)),TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf (Atom "leaf2"))),TDNS (Node (Atom "aspect1") (Leaf (Atom "leaf1")) (Leaf (Atom "leaf2")))])]}, exps = []}),
+    
+    testCase "Import and language" $ runNetworkParser "" "import testfile.lan. lang Tag {aspect1}." @?=
+        Right (Network {imp = [Imp {file = "testfile"}], lang = Language {langDef = M.fromList [("Tag", [TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop))])]}, exps = []})
     
     ]
--- evaluatorTests :: TestTree
--- evaluatorTests = testGroup "Evaluator tests" [
---     testCase 
---     ]
+
+expressionTest = testGroup "Expression tests" [
+    testCase "Empty network" $ runNetworkParser "" "" @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = []})
+
+
+    -- delegations 
+    -- groups
+    ]
