@@ -14,14 +14,11 @@ import qualified Data.Text as T
 import qualified Data.Map.Strict        as M
 
 
+-- Network parser.
 pNetwork :: Parser Network
 pNetwork = Network <$> pImports <*> pLanguage <*> pExpressionsTop
--- pNetwork = do 
---     network <- Network <$> pImports <*> pLanguage <*> pExpressionsTop
---     eof
---     return network
 
--- Parse import statements
+-- Parse import statements.
 pImports :: Parser [Import]
 pImports = do
     imports <- sepBy pImport semicolon
@@ -30,6 +27,7 @@ pImports = do
     <|>
     return []
 
+-- Parse single import statement.
 pImport :: Parser Import
 pImport = do
     _ <- pString "import"
@@ -39,6 +37,7 @@ pImport = do
 pLanguage :: Parser Language
 pLanguage = Language <$> pLangDef
 
+-- Parse languge definition.
 pLangDef :: Parser LanguageOptions
 pLangDef = do
     language <- M.fromList <$> sepBy pLangOption semicolon
@@ -46,6 +45,7 @@ pLangDef = do
     return language
     <|> return M.empty
 
+-- Parse aspect tag and language options.
 pLangOption :: Parser (ATag, [ALang])
 pLangOption = do
     _ <- pString "lang"
@@ -63,8 +63,8 @@ pExpressionsTop = try (do
     <|> do
     eof
     return []
-    <|> 
-    fail "Did not reach the end of file during parsing."
+    -- <|> 
+    -- fail "Did not reach the end of file during parsing."
 
 -- Parse Expression statements. End without period. Used within conditions. 
 pExpressions :: Parser [Expression]
@@ -84,8 +84,6 @@ pExpression = choice [
     ,   pPolicy
     ,   pVariable]
 
-
--- MISSING: Can not be in keywords 
 pVariable :: Parser Expression
 pVariable = EVar <$> variable
 
@@ -134,5 +132,5 @@ pPredicate :: Parser Expression
 pPredicate = try (do
     pString "group"; binding  <- variable; equal
     pString "pred";  variable <- variable 
-    pString "in";   p    <- braces preds
+    pString "in";    p        <- braces preds
     return $ EPred binding variable p)

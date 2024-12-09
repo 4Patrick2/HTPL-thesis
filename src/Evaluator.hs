@@ -6,16 +6,15 @@ module Evaluator (runEvaluator) where
 import AST
 import Parser
 import Env
-import TPL.API as TPL
-import qualified Data.Map.Strict as M
-import qualified Data.MultiMap       as MM
+import Data.List ( nub, delete )
 import Control.Monad (foldM)
 import Control.Monad.State.Lazy
 import Control.Monad.Reader
 import Control.Monad.Except
-import GHC.Base (undefined)
-import Data.List ( nub, delete )
-import qualified Data.Text              as T
+import TPL.API as TPL
+import qualified Data.Map.Strict as M
+import qualified Data.Text as T
+import qualified Data.MultiMap as MM
 
 
 
@@ -23,16 +22,13 @@ type Result a = Either Errors a
 
 runEvaluator :: Network -> Environment -> Result (Bindings, TPL.TrustStore)
 runEvaluator network env = do
-    let result = runRuntimeEnv (topEvaluation (exps network)) env M.empty
+    let result = runRunEnv (topEvaluation (exps network)) env M.empty
         bindings = snd result
     pts <- fst result
     return (bindings, toTrustStore pts)
 
 
-
-
-
------ Code from lars ------
+----- Code from TPL Simulator ------
 type PreTrustStore = MM.MultiMap (Atom, Atom) SuperPolicy
 -- | Simulating the delegations to be executed locally be each entity
 toTrustStore :: PreTrustStore -> TPL.TrustStore
@@ -44,39 +40,28 @@ toTrustStore pstore = M.foldrWithKey ( \(i1, i2) pols acc ->
 topEvaluation :: [Expression] -> RunEnv PreTrustStore
 topEvaluation stmts = evalStatements stmts MM.empty
 
-
+-- Evaluates consecuative statements. Checks for changes in "when" relations in between.
 evalStatements :: [Expression] -> PreTrustStore -> RunEnv PreTrustStore
--- evalStatements stmts pts = foldM (flip evalStatement) pts stmts --processWhen pts
 evalStatements (stmt:stmts) pts = do
-    -- newPts <- processWhen pts
     whenPts <- processWhen pts
     newPts <- evalStatement stmt whenPts
     evalStatements stmts newPts
 evalStatements [] pts = processWhen pts
 
 evalStatement :: Expression -> PreTrustStore -> RunEnv PreTrustStore
-evalStatement (EIf r e1 e2) pts         = do
-    evalIf r e1 e2 pts
+evalStatement (EIf r e1 e2) pts         = do evalIf r e1 e2 pts
 evalStatement (EWhen r e1 e2) pts       = do evalWhen r e1 e2 pts -- When statement
-evalStatement (EImp a r es) pts         = do
-    evalFor a r es pts
-evalStatement (EDel user1 user2 e) pts  = do
-    evalDelegations user1 user2 e pts
+evalStatement (EImp a r es) pts         = do evalFor a r es pts
+evalStatement (EDel user1 user2 e) pts  = do evalDelegations user1 user2 e pts
 evalStatement (EValue v) pts            = undefined -- do return v 
 evalStatement (EVar a) pts              = undefined --do lookupBinding a
--- Evaluation of a group statement. 
--- Place the group in bindings and return PreTrustStore unaltered. 
-evalStatement (EGroup name members) pts     = do -- MISSING: What if group is predicate
+evalStatement (EGroup name members) pts = do -- MISSING: What if group is predicate
     group <- evalGroup members
     withBinding name group
     return pts
-
--- policy expression: Need to check that all languages are in options
 evalStatement (EPol ps) pts             = do
     _ <- evalPolicy (EPol ps)
     return pts
-
--- Policy template expression: Checks policy and adds to state. 
 evalStatement (EPolTmp a (EPol pol)) pts = do
     evalPolicyTemplate a pol
     return pts
@@ -91,22 +76,20 @@ evalStatement (EPred binding a ps) pts      = do
         Nothing -> throwError $ DefaultError "No users in system"
         _ -> throwError $ DefaultError "Something went wrong in predicate!"
 
--- MISSING: Needs work
--- withBinding :: Atom -> Value -> RunEnv a -> RunEnv ()
+-- Adds binding to bindings.
 withBinding :: Atom -> Value -> RunEnv ()
 withBinding name val = do
     lift . modify $ M.insert name val
 
-
+-- Finds a value in the bindings.
 lookupBinding :: Atom -> RunEnv Value
 lookupBinding a = do
     t <- gets (M.lookup a)
     case t of
         Just v -> return v
-        Nothing -> throwError $ NoBindingForVariable a -- MISSING: Is this a error?
+        Nothing -> throwError $ NoBindingForVariable a
 
----- Evaluations
--- Add every user to user list
+-- Add every user to user list.
 evalGroup :: [Atom] -> RunEnv Value
 evalGroup g = do
     addUsers g
@@ -115,10 +98,12 @@ evalGroup g = do
 evalValue :: Int -> Value
 evalValue = VVal
 
+
 ----------------------------
 --- Predicate evaluation ---
 ----------------------------
 
+-- Performs a query between two idendities using the TPL simulator.
 performQuery :: Atom -> Atom -> PreTrustStore -> RunEnv Value
 performQuery i1 i2 pts = do
     typeTable <- getTypeTable
@@ -126,14 +111,16 @@ performQuery i1 i2 pts = do
         Right sp -> return $ VSuperPolicy (policies sp)
         _ -> throwError $ DefaultError "Problem with query."
 
-comparePolicies :: [Policy] -> Policy -> RunEnv Value--Bool
+-- Compares a list of polices against a policy.
+comparePolicies :: [Policy] -> Policy -> RunEnv Value
 comparePolicies (p1:ps) (Policy p2) = do
     res <- comparePolicy p1 (Policy p2) (M.keys p2)
-    case res of
-        True -> comparePolicies ps (Policy p2)
-        False -> return $ VBool False
+    (if res 
+        then comparePolicies ps (Policy p2) 
+        else return $ VBool False)
 comparePolicies [] (Policy p2) = do return $ VBool True
 
+-- Compare two polices.
 comparePolicy :: Policy -> Policy -> [Atom] -> RunEnv Bool
 comparePolicy (Policy pol1) (Policy pol2) (key:keys) = do
     case M.lookup key pol1 of
@@ -143,7 +130,7 @@ comparePolicy (Policy pol1) (Policy pol2) (key:keys) = do
                 Nothing -> throwError $ DefaultError "No keys in map"
                 Just (TDNS ( Node (Atom f2) (Leaf s2) (Leaf t2) )) -> do
                     case f1 == f2 of
-                        False -> return False --False --VBool Bool
+                        False -> return False
                         True -> do
                                (if (s1 == s2 || s1 == LTop) && (t1 == t2 || t1 == LTop) then
                                     comparePolicy (Policy pol1) (Policy pol2) keys
@@ -158,7 +145,7 @@ comparePolicy p1 p2 keys
     | p1 == PBot && p2 == PTop = return False
     | otherwise = return False
 
--- MISSING: Handle no result
+-- Performs a query and extracts the value.
 getPolicyList :: Atom -> Atom -> PreTrustStore -> RunEnv [Policy]
 getPolicyList i1 i2 pts = do
     r <- performQuery i1 i2 pts
@@ -166,8 +153,10 @@ getPolicyList i1 i2 pts = do
         (VSuperPolicy res) -> return res
         _ -> throwError $ DefaultError "Query failed!"
 
+-- Evaluates a predicate. 
+-- Goes through a list of users and compares their relationship to the policy.
 singlePredicate :: String -> Atom -> Policy -> [Atom] -> PreTrustStore -> RunEnv [Atom]
--- X in {id1, X
+-- Receiver used when the variable is the receiver.
 singlePredicate "receiver" i1 policy [] pts = do return []
 singlePredicate "receiver" i1 policy (user:users) pts = do
     res <- getPolicyList i1 user pts
@@ -178,7 +167,7 @@ singlePredicate "receiver" i1 policy (user:users) pts = do
             return (user:includedUsers)
         VBool False -> do
             singlePredicate "receiver" i1 policy users pts
-
+-- Sender used when the variable is the sender.
 singlePredicate "sender" i2 policy [] pts = do return []
 singlePredicate "sender" i2 policy (user:users) pts = do
     res <- getPolicyList user i2 pts
@@ -190,22 +179,20 @@ singlePredicate "sender" i2 policy (user:users) pts = do
         VBool False -> do
             singlePredicate "sender" i2 policy users pts
 
+-- Evaluates a list of predicates. Finds users that holds for all predicates. 
 evalPredicates :: Atom -> Atom -> [Pred] -> PreTrustStore -> [Atom] -> RunEnv()
 evalPredicates binding a ((Pred x y (EPol pol)):preds) pts members
     | x == y    = throwError $ BadPredicate "Predicate is ill-formed. Sender and receiver must be distinct."
     | a == x    = do -- Sender
-        newMembers <- singlePredicate "sender" y pol members pts 
+        newMembers <- singlePredicate "sender" y pol members pts
         evalPredicates binding a preds pts newMembers
     | a == y    = do -- Receiver
         newMembers <- singlePredicate "receiver" x pol members pts
         evalPredicates binding a preds pts newMembers
     | otherwise = throwError $ BadPredicate "Predicate is ill-formed"
-evalPredicates binding a [] pts members = do 
+evalPredicates binding a [] pts members = do
     withBinding binding (VGroup members)
-    -- case length members of
-    --     0 -> throwError $ DefaultError "members empty"
-    --     _ -> do
-    --         withBinding binding (VGroup members)
+
 
 -------------------------
 --- Policy Expression ---
@@ -239,10 +226,9 @@ checkPolicy' ((tag, lang):p) = do
             (if lang `elem` options then (do checkPolicy' p)
              else throwError $ NoLanguageOption tag lang)
         Nothing -> throwError $ NoLanguageOption tag lang
-        -- Nothing -> return False
 checkPolicy' [] = return True
 
-
+-- Policy template expression: Checks policy and adds to state. 
 evalPolicyTemplate :: Atom -> Policy -> RunEnv()
 evalPolicyTemplate name policy = do
     _ <- checkPolicy policy -- Verify policy contains language options.
@@ -286,7 +272,6 @@ evalDelegations i1 i2 ePol pts = do
     case i1_group of
         -- Idendity 1 is a group
         Just (VGroup g1) -> do
-            -- throwError $ UnsupportedOperation "Groups can not delegate trust" -- TODO: Possibly implemment feature.
             case i2_group of
                 Just g2 -> throwError $ UnsupportedOperation "Groups can not delegate trust to groups!"
                 Nothing -> do
@@ -305,11 +290,11 @@ evalDelegations i1 i2 ePol pts = do
                     return $ foldl (dele pol) pts pairs
                     where
                         dele pol pts (i1,g_i2) = MM.insert (i1,g_i2) (SuperPolicy [pol]) pts
-
                 -- Idendity 2 is a user
                 Nothing -> do
                     addUser i2
                     return $ MM.insert (i1, i2) (SuperPolicy [pol]) pts
+
 
 -----------------
 --- Relations ---
@@ -352,10 +337,11 @@ relationSize groupName op size = do
                 Eq      -> return (length group == size)
         _ -> throwError $ DefaultError "Variable not a group"
 
+
 --------------------
 --- If statement ---
 --------------------
--- EIf Relation [Expression] [Expression]
+
 evalIf :: Relation -> [Expression] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore-- PreTrustStore
 evalIf relation exps1 exps2 pts = do
     r_res <- evalRelation relation pts
@@ -382,11 +368,7 @@ evalFor x predicates expressions pts = do
 ----------------------
 --- When Statement ---
 ----------------------
-    -- | EIf Relation [Expression] [Expression]
-    -- | EWhen Relation [Expression] [Expression]
-    -- State = Tag="when" Value
 
--- 
 evalWhen :: Relation -> [Expression] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore
 evalWhen relation exps1 exps2 pts = do
     r_res <- evalRelation relation pts
@@ -395,15 +377,14 @@ evalWhen relation exps1 exps2 pts = do
     whenProcess <- gets (M.lookup key)
     let w = (r_res, relation, exps1, exps2) in do
         case whenProcess of
-            Just (VWhen whens) -> do -- List already initialized
-                -- lift . modify $ M.insert key (VWhen (nub $ w:whens))
-                -- lift . modify $ M.insert key (VUsers (nub $ l++[user]))
+            Just (VWhen whens) -> do
                 _ <- withBinding key (VWhen (nub $ w:whens))
                 return new_pts
             Nothing -> do
                 _ <- withBinding key (VWhen [w])
                 return new_pts
 
+-- Checks if a "when" key exists in the bindings. Goes through values if it exists. 
 processWhen :: PreTrustStore -> RunEnv PreTrustStore
 processWhen pts = do
     key <- createAtom "when"
@@ -413,11 +394,12 @@ processWhen pts = do
         Just (VWhen whens) -> do
             whenRerun whens pts
 
+-- Checks if the new result of the relation is different from the old. Evaluates opposite relation in that case.
 whenRerun :: [(Bool, Relation, [Expression], [Expression])] -> PreTrustStore  -> RunEnv PreTrustStore
 whenRerun ((oldResult, relation, exps1, exps2):whens) pts = do
     newResult <- evalRelation relation pts
-    if oldResult == newResult 
-        then 
+    if oldResult == newResult
+        then
             whenRerun whens pts -- Nothing has changed.
         else do
             key <- createAtom "when"
@@ -425,59 +407,3 @@ whenRerun ((oldResult, relation, exps1, exps2):whens) pts = do
             new_pts <- evalIf relation exps1 exps2 pts
             whenRerun whens new_pts
 whenRerun [] pts = do return pts
-
-
-
---- Ting der skal styr på:
-    -- state med variabler og 
-    -- Hvad er trust store?
-
--- Hvad bruges TypeTable til
--- Hvad bruges TrustStore til
-
--- Mit Environment: Table of language options
--- Mit Environment: Variable names
-
-
--- Parse network
--- import files -> TypeTable ???
--- Language spec -> TypeTable ???
-
--- Evaluate expressions using typetable???
--- API Calls:
---      performDelegation  :: Delegation -> TrustStore -> TypeTable -> Result TrustStore
---      performComputation :: Node -> Node -> TypeTable -> TrustStore -> Result SuperPolicy
-
--- Delegation - Delegation RestrictedFlag DRelation SPExpr LocalFlag (HTPL/AST)
--- TrustStore - type TrustStore = M.Map Identity (M.Map Identity SuperPolicy) (TPL/Env)
--- Node
--- SuperPolicy - SuperPolicy {policies :: [Policy]} (Common/AST)
-
-
--- data Policy = Policy Aspects
---             | PBot | PTop
---     deriving (Show, Eq)
-
--- type Aspects = M.Map ATag ALang
--- type Identity = T.Text -- Identities
-
-
--- type ATag     = T.Text -- Aspect Tags
-
--- -- | Add parameter for flexibility
--- data Type a = LeafT a | TDNST (Type a)
---     deriving (Show, Eq)
-
--- -- | The standard type syntax of aspect languages
--- type ALangType = Type ALangTypeTerm
-
--- data ALangTypeTerm = Atomic
---     deriving (Show, Eq)
-
--- Min ALangType er altid
--- langtype = TDNST (LeafT Atomic)
-
--- type SymTable    = M.Map Ident (Value, Bool)
--- type StrucTable  = M.Map ATag Structure  --- Table of identity and the type structure i.e Tag TDNSS(Atomic)
--- type TypeTable = M.Map ATag (ALangType, ALang) --- Table of Tag and fallback language/Nothing
--- type Environment = (StrucTable, TPL.TypeTable)

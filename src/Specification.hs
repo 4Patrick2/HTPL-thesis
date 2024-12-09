@@ -10,7 +10,6 @@ import qualified Data.Map.Strict as M
 import Common.AST
 import Data.Text as T
 import GHC.Base (undefined)
--- import Prelude as P
 
 runSpecification :: Language -> Environment
 runSpecification (Language spec) = specification spec

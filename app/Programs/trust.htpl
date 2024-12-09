@@ -1,1 +1,5 @@
-import file1.lan. lang Tag {aspect1}. trust(id1, id2) with {Tag: aspect1}.
+import file1.lan. 
+
+lang Tag {aspect2}. 
+
+trust(id1, id2) with {Tag: aspect2}.

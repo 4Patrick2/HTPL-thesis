@@ -43,33 +43,34 @@ import Evaluator
 import TPL.API as TPL
 
 main :: IO()
-main = do
-    args <- getArgs
-    case args of
-        ["-f", file, id1, id2] -> do
-            s <- readFile file
-            case (runImportParser "" (T.pack s)) of
-                Left err -> print err
-                -- Right files -> print files
-                Right files -> do
-                    case (runNetworkParser "" (T.pack s)) of 
-                        Left err -> print err
-                        Right parse -> 
-                            let (l,tt) = runSpecification (lang parse) in
-                            case runEvaluator parse (l,tt) of
-                                Left err -> print err
-                                Right (binds, ts) -> 
-                                    case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
-                                        Left err -> print err
-                                        Right res -> print res
-        _ -> die "Didnt work"
+-- main = do
+--     args <- getArgs
+--     case args of
+--         ["-f", file, id1, id2] -> do
+--             s <- readFile file
+--             case (runImportParser "" (T.pack s)) of
+--                 Left err -> print err
+--                 -- Right files -> print files
+--                 Right files -> do
+--                     case (runNetworkParser "" (T.pack s)) of 
+--                         Left err -> print err
+--                         Right parse -> 
+--                             let (l,tt) = runSpecification (lang parse) in
+--                             case runEvaluator parse (l,tt) of
+--                                 Left err -> print err
+--                                 Right (binds, ts) -> 
+--                                     case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
+--                                         Left err -> print err
+--                                         Right res -> print res
+--         _ -> die "Usage:\n\
+--                 \ htpl -f file.htpl id1 id2"
     
 -- interface: HTPL -f file.HTPL id2 id3
 
 
--- main = case (runNetworkParser "" (T.pack simple)) of
---     Left err -> print err
---     Right r -> print r
+main = case (runNetworkParser "" (T.pack test2)) of
+    Left err -> print err
+    Right r -> print r
 
 -- main =
 --     case (runNetworkParser "" (T.pack test1)) of 
@@ -100,6 +101,6 @@ exp_trust = "trust(id2, id3) with {Tag_: aspect2@_-$}."
 exp_trust_with_more = "trust(id2, id3) with {Tag_: aspect2@_-$}. trust(id4,id6) with {Tag_: aspect1}"
 exp_empty = ""
 simple = "lang Tag {aspect1}. trust(id1, id2) with {Tag: aspect1}."
-test1 = im ++ lan ++ exp_trust_with_more
+test1 = im ++ lan ++ exp_trust
 
-test2 = "import file.lan. lang Tag {aspect1}. trust(id1, id2) with {Tag: aspect1}."
+test2 = "group Name = pred X in {a, X: {Tag: test, Tag2: test2}; X, a: {Tag: test}}."

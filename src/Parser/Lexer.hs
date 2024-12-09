@@ -16,9 +16,10 @@ import Data.List (notElem)
 -- Parser monad
 type Parser = Parsec Void T.Text
 
-------------------
----- Lexing 
-------------------
+---------------
+---- Lexing ---
+---------------
+
 spaceConsumer :: Parser ()
 spaceConsumer = L.space space1 (L.skipLineComment "#") empty
 
@@ -32,7 +33,6 @@ integer :: Parser Int
 integer = lexeme $ do
     i <- many digitChar
     return $ read i
-
 
 parens, braces, brackets :: Parser a -> Parser a
 parens    = between (symbol "(") (symbol ")")
@@ -87,6 +87,7 @@ user :: Parser User
 user = lexeme $ do
     u <- user'
     T.pack <$> checkKeyword u
+    <|> fail "User name must begin with lower case character and can not contain special symbols."
 
 user' :: Parser String
 user' = (:) <$> lowerChar <*> many alphaNumChar <|> fail "User name must begin with lower case character and can not contain special symbols."
@@ -118,6 +119,10 @@ atomTail = alphaNumChar <|> char '_' <|> char '-' <|> char '@' <|> char '$'
 
 userOrVariable :: Parser T.Text
 userOrVariable = try variable <|> try user <|> fail "Atom ill-formed."
+
+---------------------------
+--- Langauge expression ---
+---------------------------
 
 -- Parse langauge expression.
 -- Can only parse type TDNS(Atomic)
@@ -151,8 +156,9 @@ aLang = do --lexeme $ do
     <|> do
     Atom <$> languageAtom
 
-
-
+------------------
+--- Predicates ---
+------------------
 preds :: Parser [Pred]
 preds = sepBy1 predicate semicolon
 
