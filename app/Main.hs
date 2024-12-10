@@ -8,8 +8,9 @@ import Parser
 import System.Exit (die)
 import System.Environment (getArgs)
 import GHC.Base (undefined)
+import Data.List ( nub, delete )
 
-
+import qualified Data.Map.Strict        as M
 -- main :: IO ()
 -- main = undefined
 -- main = do 
@@ -50,22 +51,25 @@ main :: IO()
 --             s <- readFile file
 --             case (runImportParser "" (T.pack s)) of
 --                 Left err -> print err
---                 -- Right files -> print files
---                 Right files -> do
---                     case (runNetworkParser "" (T.pack s)) of 
+--                 Right (Imp {file = path}:impps) -> do
+--                     f2 <- readFile (T.unpack path)
+--                     case (runTestParser "" (T.pack f2)) of
 --                         Left err -> print err
---                         Right parse -> 
---                             let (l,tt) = runSpecification (lang parse) in
---                             case runEvaluator parse (l,tt) of
+--                         Right lo_imp -> do
+--                             case (runNetworkParser "" (T.pack s)) of 
 --                                 Left err -> print err
---                                 Right (binds, ts) -> 
---                                     case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
---                                         Left err -> print err
---                                         Right res -> print res
+--                                 Right parse -> 
+--                                     let merged = mergeMaps (langDef (lang parse)) lo_imp in  
+--                                     let (lo,tt) = runSpecification (Language {langDef = merged}) in
+--                                         case runEvaluator parse (lo,tt) of
+--                                             Left err -> print err
+--                                             Right (binds, ts) -> 
+--                                                 case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
+--                                                     Left err -> print err
+--                                                     Right res -> print res
 --         _ -> die "Usage:\n\
 --                 \ htpl -f file.htpl id1 id2"
-    
--- interface: HTPL -f file.HTPL id2 id3
+
 
 
 main = case (runNetworkParser "" (T.pack test2)) of
@@ -101,6 +105,29 @@ exp_trust = "trust(id2, id3) with {Tag_: aspect2@_-$}."
 exp_trust_with_more = "trust(id2, id3) with {Tag_: aspect2@_-$}. trust(id4,id6) with {Tag_: aspect1}"
 exp_empty = ""
 simple = "lang Tag {aspect1}. trust(id1, id2) with {Tag: aspect1}."
-test1 = im ++ lan ++ exp_trust
+test1 = im ++ lan ++ exp_trust_with_more
 
-test2 = "group Name = pred X in {a, X: {Tag: test, Tag2: test2}; X, a: {Tag: test}}."
+test2 = "for X where {X,paul: Policy} do {for X where {X,paul: Policy} do {for X where {X,paul: Policy} do {for X where {X,paul: Policy} do {for X where {X,paul: Policy} do {}}}}}."
+
+
+
+
+mergeMaps :: LanguageOptions -> LanguageOptions -> LanguageOptions
+mergeMaps m1 m2 = do
+    -- keys <- M.keys m2
+    mergeMaps' m1 m2 (M.keys m2)
+
+
+mergeMaps' :: LanguageOptions -> LanguageOptions -> [ATag] -> LanguageOptions
+mergeMaps' m1 m2 (key:keys) = do
+    case M.lookup key m2 of
+        Nothing -> undefined
+        Just value2 -> do
+            case M.lookup key m1 of
+                Nothing -> do
+                    -- merged <- M.insert key value2  m1
+                    mergeMaps' (M.insert key value2  m1) m2 keys
+                Just value1 ->  do
+                    -- merged <- M.insert key (nub $ value1++value2) m1
+                    mergeMaps' (M.insert key (nub $ value1++value2) m1) m2 keys
+mergeMaps' m1 m2 [] = m1

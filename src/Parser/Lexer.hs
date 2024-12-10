@@ -79,7 +79,7 @@ variable :: Parser VName
 variable = lexeme $ T.pack <$> variable'
 
 variable' :: Parser String
-variable' = (:) <$> upperChar <*> many alphaNumChar <|> fail "Variable name ill-formed."
+variable' = (:) <$> upperChar <*> many alphaNumChar <|> fail "Variable name not properly formed."
 
 -- User name parsing.
 -- Begins with a lower case letter followed by letters and numbers. 
@@ -87,17 +87,20 @@ user :: Parser User
 user = lexeme $ do
     u <- user'
     T.pack <$> checkKeyword u
-    <|> fail "User name must begin with lower case character and can not contain special symbols."
 
 user' :: Parser String
 user' = (:) <$> lowerChar <*> many alphaNumChar <|> fail "User name must begin with lower case character and can not contain special symbols."
 
 -- The filenames can contain any letter and number and must end using the suffix “.lan”.
 filename :: Parser FName
-filename = lexeme $ T.pack <$> filename' <|> fail "Filename not properly formattet."
+-- filename = lexeme $ T.pack <$> filename' <|> fail "Filename not properly formattet."
+filename = lexeme $ do
+    filepath <- filename'
+    return $ T.pack $ filepath++".lan"
+     <|> fail "Filename not properly formattet."
 
 filename' :: Parser String
-filename' = lexeme $ someTill alphaNumChar (string ".lan") <|> fail "Filename not properly formattet."
+filename' = lexeme $ someTill (alphaNumChar <|> char '/') (string ".lan") <|> fail "Filename not properly formattet."
 
 checkKeyword :: String -> Parser String
 checkKeyword word = do

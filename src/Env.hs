@@ -39,7 +39,7 @@ getTypeTable :: RunEnv TPL.TypeTable
 getTypeTable = do lift $ asks snd
 
 getLanguageOptions :: RunEnv LanguageOptions
-getLanguageOptions = asks fst
+getLanguageOptions = do lift $ asks fst
 
 
 data Errors =

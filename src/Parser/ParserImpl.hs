@@ -63,13 +63,15 @@ pExpressionsTop = try (do
     <|> do
     eof
     return []
-    -- <|> 
-    -- fail "Did not reach the end of file during parsing."
+    <|> 
+    fail "Did not reach the end of file during parsing."
 
 -- Parse Expression statements. End without period. Used within conditions. 
 pExpressions :: Parser [Expression]
-pExpressions = try (do
-    sepBy pExpression semicolon)
+-- pExpressions = try (do
+--     sepBy pExpression semicolon)
+pExpressions = do
+    sepBy pExpression semicolon
     <|> return []
 
 pExpression :: Parser Expression

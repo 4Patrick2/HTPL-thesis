@@ -13,7 +13,7 @@ main :: IO ()
 main = defaultMain $ localOption (mkTimeout 1000000) tests
 
 -- tests :: TestTree
-tests = testGroup "Parser Tests" [parserTests, expressionTest]
+tests = testGroup "HTPL - Parser Testing:" [parserTests, expressionTest, policyTempTest, implicationTests]
 
 parserTests :: TestTree
 parserTests = testGroup "Imports and language" [
@@ -21,16 +21,16 @@ parserTests = testGroup "Imports and language" [
         Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = []}),
 
     testCase "Single import" $ runNetworkParser "" "import testfile.lan." @?=
-        Right (Network {imp = [Imp {file = "testfile"}], lang = Language {langDef = M.fromList []}, exps = []}),
+        Right (Network {imp = [Imp {file = "testfile.lan"}], lang = Language {langDef = M.fromList []}, exps = []}),
 
     testCase "Wrong seperation" $ runNetworkParser "" "import testfile.lan, import testfile2.lan." @?=
         Left "1:20:\n  |\n1 | import testfile.lan, import testfile2.lan.\n  |                    ^\nunexpected ','\nexpecting '.' or ';'\n",
 
     testCase "Two imports import" $ runNetworkParser "" "import testfile.lan; import testfile2.lan." @?=
-        Right (Network {imp = [Imp {file = "testfile"}, Imp {file = "testfile2"}], lang = Language {langDef = M.fromList []}, exps = []}),
+        Right (Network {imp = [Imp {file = "testfile.lan"}, Imp {file = "testfile2.lan"}], lang = Language {langDef = M.fromList []}, exps = []}),
 
     testCase "Multiple imports import" $ runNetworkParser "" "import testfile.lan; import testfile2.lan; import testfile3.lan." @?=
-        Right (Network {imp = [Imp {file = "testfile"}, Imp {file = "testfile2"}, Imp {file = "testfile3"}], lang = Language {langDef = M.fromList []}, exps = []}),
+        Right (Network {imp = [Imp {file = "testfile.lan"}, Imp {file = "testfile2.lan"}, Imp {file = "testfile3.lan"}], lang = Language {langDef = M.fromList []}, exps = []}),
 
     testCase "Bad import file" $ runNetworkParser "" "import badfile.lang." @?=
         Left "1:19:\n  |\n1 | import badfile.lang.\n  |                   ^\nunexpected 'g'\nexpecting '.' or ';'\n",
@@ -48,7 +48,7 @@ parserTests = testGroup "Imports and language" [
         Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag",[TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop)),TDNS (Node (Atom "aspect1") (Leaf (Atom "leaf")) (Leaf LTop)),TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf (Atom "leaf2"))),TDNS (Node (Atom "aspect1") (Leaf (Atom "leaf1")) (Leaf (Atom "leaf2")))])]}, exps = []}),
 
     testCase "Import and language" $ runNetworkParser "" "import testfile.lan. lang Tag {aspect1}." @?=
-        Right (Network {imp = [Imp {file = "testfile"}], lang = Language {langDef = M.fromList [("Tag", [TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop))])]}, exps = []})
+        Right (Network {imp = [Imp {file = "testfile.lan"}], lang = Language {langDef = M.fromList [("Tag", [TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop))])]}, exps = []})
 
     ]
 
@@ -90,12 +90,15 @@ expressionTest = testGroup "Expression tests" [
         Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EGroup "Name" ["user","user2"]]}),
 
     testCase "Group with Variable in list" $ runNetworkParser "" "group Name = [user, user2,     user3,user4, Group]." @?=
-        Left "1:1:\n  |\n1 | group Name = [user, user2,     user3,user4, Group].\n  | ^\nunexpected 'g'\nexpecting \"import\", \"lang\", '.', or end of input\n",
+        Left "1:45:\n  |\n1 | group Name = [user, user2,     user3,user4, Group].\n  |                                             ^\nUser name must begin with lower case character and can not contain special symbols.\n",
 
-    testCase "Group: Wrong seperation" $ runNetworkParser "" "group name = [user, user2; user3]." @?=
-        Left "1:1:\n  |\n1 | group name = [user, user2; user3].\n  | ^\nunexpected 'g'\nexpecting \"import\", \"lang\", '.', or end of input\n",
+    testCase "Group: Wrong seperation" $ runNetworkParser "" "group Name = [user, user2; user3]." @?=
+        Left "1:26:\n  |\n1 | group Name = [user, user2; user3].\n  |                          ^\nunexpected ';'\nexpecting \"import\", \"lang\", ',', '.', ']', or alphanumeric character\n",
 
-    testCase "Predicate" $ runNetworkParser "" "group Name = pred X in {a, X: {Tag: test}}." @?=
+    testCase "Group: Bad variable name" $ runNetworkParser "" "group name = [user, user2; user3]." @?=
+        Left "1:7:\n  |\n1 | group name = [user, user2; user3].\n  |       ^\nVariable name not properly formed.\n",
+
+    testCase "Predicate 1: Simple predicate" $ runNetworkParser "" "group Name = pred X in {a, X: {Tag: test}}." @?=
         Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EPred "Name" "X" [Pred "a" "X" (EPol (Policy  (M.fromList [("Tag",TDNS (Node (Atom "test") (Leaf LTop) (Leaf LTop)))])))]]}),
 
     testCase "Predicate 2: Bigger policy" $ runNetworkParser "" "group Name = pred X in {a, X: {Tag: test, Tag2: test2}}." @?=
@@ -103,19 +106,50 @@ expressionTest = testGroup "Expression tests" [
 
     testCase "Predicate 3: Multiple predicates" $ runNetworkParser "" "group Name = pred X in {a, X: {Tag: test, Tag2: test2}; X, a: {Tag: test}}." @?=
         Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EPred "Name" "X" [Pred "a" "X" (EPol (Policy  (M.fromList [("Tag",TDNS (Node (Atom "test") (Leaf LTop) (Leaf LTop))),("Tag2",TDNS (Node (Atom "test2") (Leaf LTop) (Leaf LTop)))]))),Pred "X" "a" (EPol (Policy  (M.fromList [("Tag",TDNS (Node (Atom "test") (Leaf LTop) (Leaf LTop)))])))]]})
-       
-    
-    
-    -- "Whitespace in trust" $ runNetworkParser "" "" @?=
+
+
+
 
 
     -- testCase "" $ runNetworkParser "" "" @?=
 
-
+    -- Comments
 
     -- delegations 
     -- groups
     -- $ runNetworkParser "" "" @?=
+    ]
+
+policyTempTest = testGroup "Policy template tests:" [
+
+    testCase "Policy template" $ runNetworkParser "" "policy Test = {Tag: aspect}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EPolTmp "Test" (EPol (Policy (M.fromList [("Tag",TDNS (Node (Atom "aspect") (Leaf LTop) (Leaf LTop)))])))]}),
+
+    testCase "Policy template with policy variable" $ runNetworkParser "" "policy Test = Policy." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EPolTmp "Test" (EVar "Policy")]}),
+
+    testCase "Policy template - Whitespace" $ runNetworkParser "" "policy Test           =   Policy." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EPolTmp "Test" (EVar "Policy")]}),
+
+    testCase "Policy template - Wrong symbol" $ runNetworkParser "" "policy                Test : Policy." @?=
+        Left "1:28:\n  |\n1 | policy                Test : Policy.\n  |                            ^\nunexpected ':'\nexpecting \"import\", \"lang\", '.', or '='\n"
+    ]
+
+implicationTests = testGroup "Implication tests:" [
+    testCase "For expression" $ runNetworkParser "" "for X where {X, paul: Policy} do {trust(X,paul) with Policy}." @?= 
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EImp "X" [Pred "X" "paul" (EVar "Policy")] [EDel "X" "paul" (EVar "Policy")]]}),
+
+    testCase "For expression - Empty predicate" $ runNetworkParser "" "for X where {} do {}." @?=
+        Left "1:14:\n  |\n1 | for X where {} do {}.\n  |              ^\nAtom ill-formed.\nUser name must begin with lower case character and can not contain special symbols.\nVariable name not properly formed.\n",
+
+    testCase "For expression - Empty expression" $ runNetworkParser "" "for X where {X,paul: Policy} do {}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EImp "X" [Pred "X" "paul" (EVar "Policy")] []]}),
+
+    testCase "For expression - Nested for" $ runNetworkParser "" "for X where {X,paul: Policy} do {for X where {X,paul: Policy} do {}}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EImp "X" [Pred "X" "paul" (EVar "Policy")] [EImp "X" [Pred "X" "paul" (EVar "Policy")] []]]}),
+    
+    testCase "For expression - Nested for 5 times" $ runNetworkParser "" "for X where {X,paul: Policy} do {for X where {X,paul: Policy} do {for X where {X,paul: Policy} do {for X where {X,paul: Policy} do {for X where {X,paul: Policy} do {}}}}}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EImp "X" [Pred "X" "paul" (EVar "Policy")] [EImp "X" [Pred "X" "paul" (EVar "Policy")] [EImp "X" [Pred "X" "paul" (EVar "Policy")] [EImp "X" [Pred "X" "paul" (EVar "Policy")] [EImp "X" [Pred "X" "paul" (EVar "Policy")] []]]]]]})
     ]
 
 -- literalsTests = testGroup "Literals" [
@@ -129,4 +163,7 @@ expressionTest = testGroup "Expression tests" [
 --     "Tag with underscore"
 
 --     "Tag with numbers"
+
+--      file path
+
 --     ]

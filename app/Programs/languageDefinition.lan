@@ -1,0 +1,3 @@
+lang Tag {aspect1, aspect1[leaf1], aspect1.leaf2, aspect2@_-$}; 
+lang Music {Pop, rock, rock.alternative, rock.heavy};
+lang Access {gate, gate.open, gate.close}.
