@@ -23,18 +23,3 @@ makeTypeTable s = M.fromList $ extractTags $ M.keys s
     where
     extractTags (tag : tags) = (tag, (TDNST (LeafT Atomic), LBot)) : extractTags tags
     extractTags [] = []
-
-
--- Import statement handling 
--- Not implemented
--- parseFile :: FileName -> LanguageOptions
--- parseFile filename = do
---     (content, path) <- getContent filename
---     case runTestParser "" content of
---         Right lo -> lo
---         Left err -> undefined
-
--- getContent :: FileName -> IO (T.Text)
--- getContent f = do
---     c <- readFile (T.unpack f)
---     return $ T.pack c

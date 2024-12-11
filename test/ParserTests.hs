@@ -13,7 +13,7 @@ main :: IO ()
 main = defaultMain $ localOption (mkTimeout 1000000) tests
 
 -- tests :: TestTree
-tests = testGroup "HTPL - Parser Testing:" [parserTests, expressionTest, policyTempTest, implicationTests]
+tests = testGroup "HTPL - Parser Testing:" [parserTests, expressionTest, policyTempTest, implicationTests, whenTests, ifTests, literalsTests]
 
 parserTests :: TestTree
 parserTests = testGroup "Imports and language" [
@@ -152,18 +152,104 @@ implicationTests = testGroup "Implication tests:" [
         Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EImp "X" [Pred "X" "paul" (EVar "Policy")] [EImp "X" [Pred "X" "paul" (EVar "Policy")] [EImp "X" [Pred "X" "paul" (EVar "Policy")] [EImp "X" [Pred "X" "paul" (EVar "Policy")] [EImp "X" [Pred "X" "paul" (EVar "Policy")] []]]]]]})
     ]
 
--- literalsTests = testGroup "Literals" [
+whenTests = testGroup "When tests:" [
+    testCase "When expression" $ runNetworkParser "" "when (x in Xs) do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EWhen (RIn "x" "Xs") [EDel "id1" "id2" (EVar "Policy")] [EDel "id1" "id2" (EVar "Policy")]]}),
+    
+    testCase "When expression - empty relation" $ runNetworkParser "" "when () do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}." @?=
+        Left "1:7:\n  |\n1 | when () do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}.\n  |       ^\nRelation not properly formattet.\nUser name must begin with lower case character and can not contain special symbols.\nVariable name not properly formed.\n",
 
---     "Group tag"
+    testCase "When expression - Eval relation" $ runNetworkParser "" "when (eval(id1, id2 = Policy)) do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EWhen (REval "id1" "id2" (EVar "Policy")) [EDel "id1" "id2" (EVar "Policy")] [EDel "id1" "id2" (EVar "Policy")]]}),
+    
+    testCase "When expression - Size relation Less" $ runNetworkParser "" "when (Group < 10) do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EWhen (RSize "Group" Less 10) [EDel "id1" "id2" (EVar "Policy")] [EDel "id1" "id2" (EVar "Policy")]]}),
 
---     "Speciel character aspect"
+    testCase "When expression - Size relation Equal" $ runNetworkParser "" "when (Group == 10) do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EWhen (RSize "Group" Eq 10) [EDel "id1" "id2" (EVar "Policy")] [EDel "id1" "id2" (EVar "Policy")]]}),
 
---     "Variable"
+    testCase "When expression - Size relation Greater" $ runNetworkParser "" "when (Group > 10) do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EWhen (RSize "Group" Greater 10) [EDel "id1" "id2" (EVar "Policy")] [EDel "id1" "id2" (EVar "Policy")]]}),
 
---     "Tag with underscore"
+    testCase "When expression - In relation" $ runNetworkParser "" "when (   x   in    Xs   ) do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EWhen (RIn "x" "Xs") [EDel "id1" "id2" (EVar "Policy")] [EDel "id1" "id2" (EVar "Policy")]]}),
+    
+    testCase "When expression - Not In relation" $ runNetworkParser "" "when (not x in Xs) do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EWhen (RNot (RIn "x" "Xs")) [EDel "id1" "id2" (EVar "Policy")] [EDel "id1" "id2" (EVar "Policy")]]})
+    ]
 
---     "Tag with numbers"
+ifTests = testGroup "If tests:" [
 
---      file path
+    testCase "If expression" $ runNetworkParser "" "if ( not x in Xs ) then {trust(x1, x2) with Policy1} else{trust (x2,x1) with Policy2}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EIf (RNot (RIn "x" "Xs")) [EDel "x1" "x2" (EVar "Policy1")] [EDel "x2" "x1" (EVar "Policy2")]]}),
+    
+    testCase "If expression - Empty relation" $ runNetworkParser "" "if (  ) then {trust(x1, x2) with Policy1} else{trust (x2,x1) with Policy2}." @?=
+        Left "1:7:\n  |\n1 | if (  ) then {trust(x1, x2) with Policy1} else{trust (x2,x1) with Policy2}.\n  |       ^\nRelation not properly formattet.\nUser name must begin with lower case character and can not contain special symbols.\nVariable name not properly formed.\n",
 
---     ]
+    testCase "If expression - Nested if" $ runNetworkParser "" "if ( x in Xs ) then {if (x1 in Xs) then  {trust (x1,x2) with Policy3} else {}} else{trust (x2,x1) with Policy2}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EIf (RIn "x" "Xs") [EIf (RIn "x1" "Xs") [EDel "x1" "x2" (EVar "Policy3")] []] [EDel "x2" "x1" (EVar "Policy2")]]}),
+
+    testCase "If expression - Trust Group -> User" $ runNetworkParser "" "if ( x in Xs ) then {trust(x, Xs) with Policy1} else{trust (x2,x1) with Policy2}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EIf (RIn "x" "Xs") [EDel "x" "Xs" (EVar "Policy1")] [EDel "x2" "x1" (EVar "Policy2")]]}),
+
+    testCase "If expression - Trust User -> Group" $ runNetworkParser "" "if ( x in Xs ) then {trust(Xs, x) with Policy1} else{trust (x2,x1) with Policy2}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EIf (RIn "x" "Xs") [EDel "Xs" "x" (EVar "Policy1")] [EDel "x2" "x1" (EVar "Policy2")]]})
+
+    ]
+
+literalsTests = testGroup "Literals" [
+
+    testCase "Aspect tag 1" $ runNetworkParser "" "lang Tag {aspect1}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag",[TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop))])]}, exps = []}),
+
+    testCase "Aspect tag 2" $ runNetworkParser "" "lang Tag_ {aspect1}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag_",[TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop))])]}, exps = []}),
+
+    testCase "Aspect tag 3" $ runNetworkParser "" "lang Tag_test_12 {aspect1}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag_test_12",[TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop))])]}, exps = []}),    
+
+    testCase "Language expression 1" $ runNetworkParser "" "lang Tag {Aspect1}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag",[TDNS (Node (Atom "Aspect1") (Leaf LTop) (Leaf LTop))])]}, exps = []}),
+
+    testCase "Language expression 2" $ runNetworkParser "" "lang Tag {Aspe_ct1}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag",[TDNS (Node (Atom "Aspe_ct1") (Leaf LTop) (Leaf LTop))])]}, exps = []}),
+
+    testCase "Language expression 3" $ runNetworkParser "" "lang Tag {Aspe-ct1}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag",[TDNS (Node (Atom "Aspe-ct1") (Leaf LTop) (Leaf LTop))])]}, exps = []}),
+
+    testCase "Language expression 4" $ runNetworkParser "" "lang Tag {Aspe@ct1}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag",[TDNS (Node (Atom "Aspe@ct1") (Leaf LTop) (Leaf LTop))])]}, exps = []}),
+
+    testCase "Language expression 5" $ runNetworkParser "" "lang Tag {Aspe$ct1}." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList [("Tag",[TDNS (Node (Atom "Aspe$ct1") (Leaf LTop) (Leaf LTop))])]}, exps = []}),
+
+    testCase "Language expression 6" $ runNetworkParser "" "lang Tag {12aspe$ct1}." @?=
+        Left "1:11:\n  |\n1 | lang Tag {12aspe$ct1}.\n  |           ^\nLanguage expression not properly formed.\nLanguage expression not well formed.\n",
+
+    testCase "Variable 1" $ runNetworkParser "" "group Var = [one]." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EGroup "Var" ["one"]]}),
+
+    testCase "Variable 2" $ runNetworkParser "" "group Var120 = [one]." @?=
+        Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EGroup "Var120" ["one"]]}),
+
+    testCase "Variable 3" $ runNetworkParser "" "group var = [one]." @?=
+        Left "1:7:\n  |\n1 | group var = [one].\n  |       ^\nVariable name not properly formed.\n",
+
+    testCase "Filepath 1" $ runNetworkParser "" "import file.lan." @?=
+        Right (Network {imp = [Imp {file = "file.lan"}], lang = Language {langDef = M.fromList []}, exps = []}),
+
+
+    testCase "Filepath 2" $ runNetworkParser "" "import app/file.lan." @?=
+        Right (Network {imp = [Imp {file = "app/file.lan"}], lang = Language {langDef = M.fromList []}, exps = []}),
+
+
+    testCase "Filepath 3" $ runNetworkParser "" "import ./app/file.lan." @?=
+        Right (Network {imp = [Imp {file = "./app/file.lan"}], lang = Language {langDef = M.fromList []}, exps = []}),
+
+
+    testCase "Filepath 4" $ runNetworkParser "" "import ~/app/file.lan." @?=
+        Right (Network {imp = [Imp {file = "~/app/file.lan"}], lang = Language {langDef = M.fromList []}, exps = []}),
+    
+    testCase "Keyword" $ runNetworkParser "" "group Name = [group]." @?=
+        Left "1:20:\n  |\n1 | group Name = [group].\n  |                    ^\nAtom can not be a reserved keyword!\n"
+    ]

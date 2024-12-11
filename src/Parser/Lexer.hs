@@ -100,7 +100,7 @@ filename = lexeme $ do
      <|> fail "Filename not properly formattet."
 
 filename' :: Parser String
-filename' = lexeme $ someTill (alphaNumChar <|> char '/') (string ".lan") <|> fail "Filename not properly formattet."
+filename' = lexeme $ someTill (printChar <|> char '/') (string ".lan") <|> fail "Filename not properly formattet."
 
 checkKeyword :: String -> Parser String
 checkKeyword word = do
@@ -214,7 +214,7 @@ relation =
             to   <- user;       equal
             pol  <- pPolicy;    symbol ")"
             return $ REval from to pol
-    <|> try (do name <- variable
+    <|> try (do name <- user
                 pString "in"
                 RIn name <$> variable)
     <|> try (do group <- variable

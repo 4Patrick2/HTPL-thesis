@@ -27,7 +27,6 @@ library
   exposed-modules:
       AST
       Env
-      Error
       Evaluator
       Parser
       Parser.Lexer
@@ -86,7 +85,6 @@ library
 executable HTPL-thesis-exe
   main-is: Main.hs
   other-modules:
-      CommandLine
       Paths_HTPL_thesis
   autogen-modules:
       Paths_HTPL_thesis

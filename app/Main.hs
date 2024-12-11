@@ -44,37 +44,37 @@ import Evaluator
 import TPL.API as TPL
 
 main :: IO()
--- main = do
---     args <- getArgs
---     case args of
---         ["-f", file, id1, id2] -> do
---             s <- readFile file
---             case (runImportParser "" (T.pack s)) of
---                 Left err -> print err
---                 Right (Imp {file = path}:impps) -> do
---                     f2 <- readFile (T.unpack path)
---                     case (runTestParser "" (T.pack f2)) of
---                         Left err -> print err
---                         Right lo_imp -> do
---                             case (runNetworkParser "" (T.pack s)) of 
---                                 Left err -> print err
---                                 Right parse -> 
---                                     let merged = mergeMaps (langDef (lang parse)) lo_imp in  
---                                     let (lo,tt) = runSpecification (Language {langDef = merged}) in
---                                         case runEvaluator parse (lo,tt) of
---                                             Left err -> print err
---                                             Right (binds, ts) -> 
---                                                 case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
---                                                     Left err -> print err
---                                                     Right res -> print res
---         _ -> die "Usage:\n\
---                 \ htpl -f file.htpl id1 id2"
+main = do
+    args <- getArgs
+    case args of
+        ["-f", file, id1, id2] -> do
+            s <- readFile file
+            case (runImportParser "" (T.pack s)) of
+                Left err -> print err
+                Right (Imp {file = path}:impps) -> do
+                    f2 <- readFile (T.unpack path)
+                    case (runTestParser "" (T.pack f2)) of
+                        Left err -> print err
+                        Right lo_imp -> do
+                            case (runNetworkParser "" (T.pack s)) of 
+                                Left err -> print err
+                                Right parse -> 
+                                    let merged = mergeMaps (langDef (lang parse)) lo_imp in  
+                                    let (lo,tt) = runSpecification (Language {langDef = merged}) in
+                                        case runEvaluator parse (lo,tt) of
+                                            Left err -> print err
+                                            Right (binds, ts) -> 
+                                                case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
+                                                    Left err -> print err
+                                                    Right res -> print res
+        _ -> die "Usage:\n\
+                \ htpl -f file.htpl id1 id2"
 
 
 
-main = case (runNetworkParser "" (T.pack test2)) of
-    Left err -> print err
-    Right r -> print r
+-- main = case (runNetworkParser "" (T.pack test2)) of
+--     Left err -> print err
+--     Right r -> print r
 
 -- main =
 --     case (runNetworkParser "" (T.pack test1)) of 
@@ -107,7 +107,7 @@ exp_empty = ""
 simple = "lang Tag {aspect1}. trust(id1, id2) with {Tag: aspect1}."
 test1 = im ++ lan ++ exp_trust_with_more
 
-test2 = "for X where {X,paul: Policy} do {for X where {X,paul: Policy} do {for X where {X,paul: Policy} do {for X where {X,paul: Policy} do {for X where {X,paul: Policy} do {}}}}}."
+test2 = "group Name = [group]."
 
 
 
@@ -125,9 +125,7 @@ mergeMaps' m1 m2 (key:keys) = do
         Just value2 -> do
             case M.lookup key m1 of
                 Nothing -> do
-                    -- merged <- M.insert key value2  m1
                     mergeMaps' (M.insert key value2  m1) m2 keys
                 Just value1 ->  do
-                    -- merged <- M.insert key (nub $ value1++value2) m1
                     mergeMaps' (M.insert key (nub $ value1++value2) m1) m2 keys
-mergeMaps' m1 m2 [] = m1
+mergeMaps' m1 _m2 [] = m1
