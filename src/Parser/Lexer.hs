@@ -89,7 +89,7 @@ user = lexeme $ do
     T.pack <$> checkKeyword u
 
 user' :: Parser String
-user' = (:) <$> lowerChar <*> many alphaNumChar <|> fail "User name must begin with lower case character and can not contain special symbols."
+user' = (:) <$> lowerChar <*> many (alphaNumChar <|> char '_') <|> fail "User name must begin with lower case character and can not contain special symbols."
 
 -- The filenames can contain any letter and number and must end using the suffix “.lan”.
 filename :: Parser FName

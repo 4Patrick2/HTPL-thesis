@@ -1,0 +1,17 @@
+lang Access {vessel, port};
+lang Certificate {pilot, engineer}.
+
+group Crew = [captain, first_mate, chief_engineer, second_engineer, chief_cook, tmp_worker];
+policy VesselAccess = {Access: vessel};
+policy PortAccess = {Access: port};
+
+trust (captain, Crew) with VesselAccess;
+
+when (tmp_worker in Crew) do {
+    trust(captain, tmp_worker) with VesselAccess
+} otherwise {
+    trust(captain, tmp_worker) with PortAccess
+};
+
+group Crew = [captain, first_mate, chief_engineer, second_engineer, chief_cook];
+group Crew = [captain, first_mate, chief_engineer, second_engineer, chief_cook, tmp_worker].

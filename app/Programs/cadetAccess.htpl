@@ -1,0 +1,34 @@
+lang Access {ship, ship[bridge], ship[engine], ship[engine]._, ship[engine].fuzeBox};
+lang Navigation {course, course.set, course.check};
+lang Equipment {tools, tools[electric], tools[blowtourch]}.
+
+policy DeckAccess = {Access: ship[bridge], Navigation: course};
+policy EngineAccess  = {Access: ship[engine], Equipment: tools};
+
+group EngineDepartment = [chief_enginner, second_enginner, engine_cadet];
+group DeckDepartment = [captain, chief_mate, second_mate];
+
+trust (captain, EngineDepartment) with EngineAccess;
+trust (captain, DeckDepartment) with DeckAccess;
+
+trust (chief_enginner, engine_cadet) with {Equipment: tools[electric]};
+
+if (engine_cadet in EngineDepartment) then {
+    trust(captain, engine_cadet) with {Access: ship[engine]._}
+} else {};
+
+if (eval(cheif_enginner, engine_cadet = {Equipment: tools[electric]})) then {
+    if (eval(cheif_enginner, engine_cadet = {Equipment: tools[blowtourch]})) then {
+        trust(captain, engine_cadet) with {Access: ship[engine]}
+    } else {
+        trust(captain, engine_cadet) with {Access: ship[engine].fuzeBox}
+    }
+} else {
+    if (eval(cheif_enginner, engine_cadet=  {Equipment: tools[blowtourch]})) then {
+        trust(captain, engine_cadet) with {Access: ship[engine]}
+    } else {}
+}.
+
+
+
+

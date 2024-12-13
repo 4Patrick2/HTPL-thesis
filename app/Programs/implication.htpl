@@ -1,0 +1,16 @@
+lang Access {port.bay};
+lang Equipment {tools, heavyMachinery};
+lang Certificate {loading, loading.unload, loading.load}.
+
+group UnloadStudents = [jeff, paul, peter];
+group Employees = [e1, e2, paul, e3];
+
+trust (school, UnloadStudents) with {Certificate: loading.unload};
+trust (chief_engineer, paul) with {Equipment: heavyMachinery};
+
+for Staff where {
+    school, Staff: {Certificate: loading.unload};
+    chief_engineer, Staff: {Equipment: heavyMachinery}
+} do {
+    trust (manager, Staff) with {Access: port.bay}
+}.

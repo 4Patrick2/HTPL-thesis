@@ -2,7 +2,7 @@
 
 module Parser 
     ( runNetworkParser
-    , runTestParser
+    , runLOParser
     , runImportParser
     ) where
 
@@ -31,5 +31,5 @@ runImportParser f s =
         Right r -> Right r 
 
 -- Parser function used for testing individual parsers.
-runTestParser :: String -> T.Text -> Either String LanguageOptions
-runTestParser f s = runParser pLangDef f s 
+runLOParser :: String -> T.Text -> Either String LanguageOptions
+runLOParser f s = runParser pLangDef f s 

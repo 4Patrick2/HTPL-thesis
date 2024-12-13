@@ -1,0 +1,15 @@
+lang Nav {bouy[Capesize], bouy[Suezmax], bouy, revoked}.
+
+trust (dkNav, bouy1) with {Nav: bouy[Capesize]};
+trust (dkNav, bouy2) with {Nav: bouy[Suezmax]};
+
+group Bouys = pred X in 
+    {dkNav, X:  {Nav :bouy}};
+
+when (eval(dkNav, bouy1 = {Nav: bouy[Capesize]})) do {
+    trust (captain, bouy1) with {Nav: bouy}
+} otherwise {
+    trust (captain, bouy1) with {Nav: revoked}
+};
+
+trust (dkNav, bouy1) with {Nav: revoked}.

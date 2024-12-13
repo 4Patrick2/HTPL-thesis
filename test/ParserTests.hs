@@ -3,6 +3,7 @@
 
 import AST
 import Parser
+import RunEvaluator 
 
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -13,7 +14,7 @@ main :: IO ()
 main = defaultMain $ localOption (mkTimeout 1000000) tests
 
 -- tests :: TestTree
-tests = testGroup "HTPL - Parser Testing:" [parserTests, expressionTest, policyTempTest, implicationTests, whenTests, ifTests, literalsTests]
+tests = testGroup "HTPL - Parser Testing:" [parserTests, expressionTest, policyTempTest, implicationTests, whenTests, ifTests, literalsTests, delegationTests]
 
 parserTests :: TestTree
 parserTests = testGroup "Imports and language" [
@@ -106,18 +107,6 @@ expressionTest = testGroup "Expression tests" [
 
     testCase "Predicate 3: Multiple predicates" $ runNetworkParser "" "group Name = pred X in {a, X: {Tag: test, Tag2: test2}; X, a: {Tag: test}}." @?=
         Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EPred "Name" "X" [Pred "a" "X" (EPol (Policy  (M.fromList [("Tag",TDNS (Node (Atom "test") (Leaf LTop) (Leaf LTop))),("Tag2",TDNS (Node (Atom "test2") (Leaf LTop) (Leaf LTop)))]))),Pred "X" "a" (EPol (Policy  (M.fromList [("Tag",TDNS (Node (Atom "test") (Leaf LTop) (Leaf LTop)))])))]]})
-
-
-
-
-
-    -- testCase "" $ runNetworkParser "" "" @?=
-
-    -- Comments
-
-    -- delegations 
-    -- groups
-    -- $ runNetworkParser "" "" @?=
     ]
 
 policyTempTest = testGroup "Policy template tests:" [
@@ -253,3 +242,35 @@ literalsTests = testGroup "Literals" [
     testCase "Keyword" $ runNetworkParser "" "group Name = [group]." @?=
         Left "1:20:\n  |\n1 | group Name = [group].\n  |                    ^\nAtom can not be a reserved keyword!\n"
     ]
+
+lang_1 = "lang Access {gate, gate.open, gate.close, gate[front], gate[front].open, gate[front].close}."
+evalDel = "group SecurityDepartment = [guard_1, guard_2, guard_3]; trust (manager, SecurityDepartment) with {Access: gate[front]}."
+
+delegationTests :: TestTree
+delegationTests = testGroup "Delegation:" [
+    testCase "Empty network" $ evalTest "" "id1" "id2" @?=
+        Right (SuperPolicy {policies = [PBot]}),
+    
+    testCase "Delegation" $ evalTest (lang_1++"trust(id1, id2) with {Access: gate.open}.") "id1" "id2" @?=
+        Right (SuperPolicy {policies = [Policy (M.fromList [("Access",TDNS (Node (Atom "gate") (Leaf (Atom "front")) (Leaf LTop)))])]})
+    ]   
+
+im = "import language.lan."
+lan = "lang Tag_ {aspect1, aspect1[leaf1], aspect1.leaf2, aspect2@_-$}; lang Music {Pop, rock, rock.alternative, rock.heavy}."
+expres = "trust(id1, id2) with {Tag: aspect1}; trust(id2, id3) with {Tag: aspect1[leaf1]}."
+-- expres = "group One = [id1, id2, id3]; trust(id2, id3) with {Tag: aspect1[leaf1]}; trust(id1, id2) with {Tag: aspect1}."
+exp_if = "group One = [id1, id2, id3]; if (id4 in One) then {trust(id1, id2) with {Tag: aspect1}} else {trust(id1, id2) with {Tag: aspect2}}."
+exp_if_eval = "trust(id1, id2) with {Tag: aspect1}; if (eval(id1,id2: {Tag: aspect1})) then {trust(id1, id3) with {Tag: aspect1}.} else {trust(id1, id3) with {Tag: aspect2}.}."
+exp_group = "group One = [id2, id3]; trust(One, id1) with {Tag: aspect1}."
+exp_pred = "group One = [id2, id3]; trust(id1, One) with {Tag: aspect1}; group Two = pred X in {id1, X: {Tag: aspect1}}; trust(Two, id1) with {Tag: aspect2}."
+exp_pred2 = "group One = [id2, id3]; trust(One, id1) with {Tag: aspect1}; group Two = pred X in {X, id1: {Tag: aspect1}}; trust(id1, Two) with {Tag: aspect2}."
+exp_tmp = "policy Pol = {Tag: aspect1.leaf2}; trust(id1, id2) with Pol."
+exp_for = "group One = [id2, id3];  trust(id1, One) with {Tag: aspect1}; for (X) where {id1, X: {Tag: aspect1}} do  {trust(X, id1) with {Tag: aspect2}.}."
+exp_when_false = "when (eval(id1,id2: {Tag: aspect1})) do {trust(id2, id3) with {Tag: aspect1}} otherwise {trust(id2, id3) with {Tag: aspect2}}."
+exp_when_true = "when (eval(id1,id2: {Tag: aspect1})) do {trust(id2, id3) with {Tag: aspect1}} otherwise {trust(id2, id3) with {Tag: aspect2}; trust(id1,id2) with {Tag: aspect1}}."
+exp_trust = "trust(id2, id3) with {Tag_: aspect2@_-$}."
+exp_trust_with_more = "trust(id2, id3) with {Tag_: aspect2@_-$}. trust(id4,id6) with {Tag_: aspect1}"
+exp_empty = ""
+simple = "lang Tag {aspect1}. trust(id1, id2) with {Tag: aspect1}."
+
+test2 = "group Name = [group]."

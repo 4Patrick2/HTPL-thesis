@@ -1,0 +1,13 @@
+lang Access {bridge, bridge.close, bridge.open};
+lang Navigation {course, course.cet, course.check}.
+
+policy HighAccess = {Access: bridge, Navigation: course};
+policy LowAccess  = {Access: bridge.close, Navigation: course.check};
+
+group CateringDepartment = [chief_cook, steaward];
+group EngineDepartment = [chief_enginner, second_enginner];
+group DeckDepartment = [captain, chief_mate, second_mate];
+
+trust (captain, CateringDepartment) with LowAccess;
+trust (captain, EngineDepartment) with LowAccess;
+trust (captain, DeckDepartment) with HighAccess.

@@ -1,0 +1,16 @@
+lang Access {ship[bridge], ship[engine], ship[engine].fuzeBox};
+lang Navigation {course, course.set, course.check};
+lang Equipment {tools, tools[electric], tools[blowtourch]};
+lang Certificate {pilot, engineer}.
+
+group Crew = [captain, first_mate, second_mate];
+
+
+when (captain in Crew) do {
+    group Crew = [first_mate, second_mate]
+} otherwise {
+    group Crew = [captain, first_mate, second_mate]
+};
+
+trust (captain, first_mate) with {Certificate: pilot}.
+

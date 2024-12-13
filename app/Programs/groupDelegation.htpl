@@ -1,0 +1,7 @@
+lang Access {gate, gate.open, gate.close,
+             gate[front], 
+             gate[front].open,
+             gate[front].close}.
+            
+group SecurityDepartment = [guard_1, guard_2, guard_3];    
+trust (manager, SecurityDepartment) with {Access: gate[front]}.

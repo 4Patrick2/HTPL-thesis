@@ -53,8 +53,6 @@ evalStatement (EIf r e1 e2) pts         = do evalIf r e1 e2 pts
 evalStatement (EWhen r e1 e2) pts       = do evalWhen r e1 e2 pts -- When statement
 evalStatement (EImp a r es) pts         = do evalFor a r es pts
 evalStatement (EDel user1 user2 e) pts  = do evalDelegations user1 user2 e pts
-evalStatement (EValue v) pts            = undefined -- do return v 
-evalStatement (EVar a) pts              = undefined --do lookupBinding a
 evalStatement (EGroup name members) pts = do -- MISSING: What if group is predicate
     group <- evalGroup members
     withBinding name group
@@ -261,8 +259,15 @@ findPairs :: Atom -> [Atom] -> RunEnv [(Atom, Atom)]
 findPairs i1 group = do return $ map (\x -> (i1, x)) group
 
 findPairsGroupToId :: [Atom] -> Atom -> RunEnv [(Atom, Atom)]
-findPairsGroupToId group i2 = do return $ map (\x -> (x, i2)) group
+findPairsGroupToId group i2 = do return $ filter (\(x,y) -> x /= y) $ map (\x -> (x, i2)) group
+-- findPairsGroupToId group i2 = do 
+--     pairsWithDub <- map (\x -> (x, i2)) group
+--     return $ filter (\(x,y) -> x /= y) pairsWithDub
 
+testMap :: Atom -> Atom -> Maybe (Atom, Atom)
+testMap i1 i2 
+    | i1 == i2 = Just (i1, i2)
+    | otherwise = Nothing
 
 evalDelegations :: Atom -> Atom -> Expression -> PreTrustStore -> RunEnv PreTrustStore
 evalDelegations i1 i2 ePol pts = do
