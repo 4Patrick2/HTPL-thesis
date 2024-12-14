@@ -1,0 +1,30 @@
+lang Tag {aspect1, aspect2}.
+
+group Members = [m1,m2,m3,m4,m5];
+
+trust (s1, Members) with {Tag: aspect1};
+trust (s2, m1) with {Tag: aspect2};
+
+for X where {
+    s1, X: {Tag: aspect1};
+    s2, X: {Tag: aspect2}
+} do {
+    trust(X, s3) with {Tag: aspect2}
+}.
+
+#for X where {
+#    s1, X: {Tag: aspect1};
+#    s2, X: {Tag: aspect2}
+#} do {
+#    when (X in Members) do {
+#        trust(X, s3) with {Tag: aspect1}
+#    } otherwise {
+#        trust(X, s3) with {Tag: aspect2}
+#    }
+#}.
+
+#when (m1 in Members) do {
+#    trust(m1, s3) with {Tag: aspect1}
+#} otherwise {
+#    trust(m1, s3) with {Tag: aspect2}
+#}.

@@ -25,6 +25,7 @@ import Specification
 import Env
 import Evaluator
 import TPL.API as TPL
+import AST (LanguageOptions)
 
 main :: IO()
 -- main = do
@@ -39,39 +40,156 @@ main :: IO()
 --                     case (runTestParser "" (T.pack f2)) of
 --                         Left err -> print err
 --                         Right lo_imp -> do
---                             case (runNetworkParser "" (T.pack s)) of 
+--                             case (runNetworkParser "" (T.pack s)) of
 --                                 Left err -> print err
---                                 Right parse -> 
---                                     let merged = mergeMaps (langDef (lang parse)) lo_imp in  
+--                                 Right parse ->
+--                                     let merged = mergeMaps (langDef (lang parse)) lo_imp in
 --                                     let (lo,tt) = runSpecification (Language {langDef = merged}) in
 --                                         case runEvaluator parse (lo,tt) of
 --                                             Left err -> print err
---                                             Right (binds, ts) -> 
+--                                             Right (binds, ts) ->
 --                                                 case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
 --                                                     Left err -> print err
 --                                                     Right res -> print res
 --         _ -> die "Usage:\n\
 --                 \ htpl file.htpl id1 id2"
 
+-- Handles one import
+-- main = do
+--     args <- getArgs
+--     case args of
+--         [file, id1, id2] -> do
+--             s <- readFile file
+--             case (runImportParser "" (T.pack s)) of
+--                 Left err -> print err
+--                 Right (Imp {file = path}:impps) -> do
+--                     f2 <- readFile (T.unpack path)
+--                     case (runLOParser "" (T.pack f2)) of
+--                         Left err -> print err
+--                         Right lo_imp -> do
+--                             case (runNetworkParser "" (T.pack s)) of
+--                                 Left err -> print err
+--                                 Right parse ->
+--                                     let merged = mergeMaps (langDef (lang parse)) lo_imp in
+--                                     let (lo,tt) = runSpecification (Language {langDef = merged}) in
+--                                         case runEvaluator parse (lo,tt) of
+--                                             Left err -> print err
+--                                             Right (binds, ts) ->
+--                                                 case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
+--                                                     Left err -> print err
+--                                                     Right res -> print res
+--                 Right [] -> do
+--                     case (runNetworkParser "" (T.pack s)) of
+--                         Left err -> print err
+--                         Right parse ->
+--                             let (lo,tt) = runSpecification (lang parse) in
+--                                 case runEvaluator parse (lo,tt) of
+--                                     Left err -> print err
+--                                     Right (binds, ts) ->
+--                                         case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
+--                                             Left err -> print err
+--                                             Right res -> print res
+--         _ -> die "Usage:\n\
+--                 \ htpl file.htpl id1 id2"
+
+-- main = do
+--     args <- getArgs
+--     case args of
+--         [file, id1, id2] -> do
+--             s <- readFile file
+--             case (runImportParser "" (T.pack s)) of
+--                 Left err -> print err
+--                 Right imps -> do
+--                     -- let n = foldl mergeMaps M.empty (map (\(Imp {file=f}) -> do s <-readFile (T.unpack f); case runLOParser "" (T.pack s) of {Left err -> M.empty; Right lo -> lo}) imps) in
+--                     -- let files = map (\(Imp {file=f}) -> readFile (T.unpack f)) imps 
+--                     -- let test =  foldl mergeMaps M.empty (map (\s -> case runLOParser "" (T.pack s) of {Left err -> M.empty; Right lo -> lo}) files) 
+--                     do print "Success"
+--         _ -> die "Usage:\n\
+--                 \ htpl file.htpl id1 id2"
+
+
 main = do
     args <- getArgs
     case args of
         [file, id1, id2] -> do
             s <- readFile file
-            case (runNetworkParser "" (T.pack s)) of 
-                Left err -> --print err
-                    do putStrLn err
-                Right parse -> 
-                    let (lo,tt) = runSpecification (lang parse) in
-                        case runEvaluator parse (lo,tt) of
-                            Left err -> print err
-                            Right (binds, ts) -> 
-                                case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
+            case (runImportParser "" (T.pack s)) of
+                Left err -> do putStrLn err
+                Right [] -> do 
+                    case (runNetworkParser "" (T.pack s)) of
+                        Left err -> do putStrLn err
+                        Right parse ->
+                            let (lo,tt) = runSpecification (lang parse) in
+                                case runEvaluator parse (lo,tt) of
                                     Left err -> print err
-                                    Right res -> --print res
-                                        do putStrLn (printSuperPolicy res)
+                                    Right (binds, ts) ->
+                                        case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
+                                            Left err -> print err
+                                            Right res -> print res
+                Right imps -> do
+                    let files = map (\(Imp {file=f}) -> readFile (T.unpack f)) imps
+                    ss <- foldl (\s1 s2 -> liftM2 (++) s1 s2) (head files) (tail files)
+                    case (runLOParser "" (T.pack ss)) of
+                        Left err -> do putStrLn err
+                        Right lo_imp -> do
+                            case (runNetworkParser "" (T.pack s)) of
+                                Left err -> do putStrLn err
+                                Right parse ->
+                                    let merged = mergeMaps (langDef (lang parse)) lo_imp in
+                                    let (lo,tt) = runSpecification (Language {langDef = merged}) in
+                                        case runEvaluator parse (lo,tt) of
+                                            Left err -> print err
+                                            Right (binds, ts) ->
+                                                case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
+                                                    Left err -> print err
+                                                    Right res -> do putStrLn (printSuperPolicy res)
         _ -> die "Usage:\n\
                 \ htpl file.htpl id1 id2"
+
+
+getImports :: Import -> IO String
+getImports Imp {file = f} = do readFile (T.unpack f)
+
+getImps :: [Import] -> [IO String]
+getImps (i:is) = do
+    getImports i : getImps is
+getImps [] = []
+
+parseLO :: [String] -> Either String LanguageOptions
+parseLO [s] = do
+    case runLOParser "" (T.pack s) of
+        Left err -> Left err
+        Right lo -> do Right lo
+parseLO (s:ss) = do
+    case runLOParser "" (T.pack s) of
+        Left err -> Left err
+        Right lo -> do
+            case parseLO ss of
+                Left err -> Left err
+                Right los -> do
+                    let merged = mergeMaps lo los in
+                        Right merged
+
+-- Main without imports 
+-- main = do
+--     args <- getArgs
+--     case args of
+--         [file, id1, id2] -> do
+--             s <- readFile file
+--             case (runNetworkParser "" (T.pack s)) of 
+--                 Left err -> --print err
+--                     do putStrLn err
+--                 Right parse -> 
+--                     let (lo,tt) = runSpecification (lang parse) in
+--                         case runEvaluator parse (lo,tt) of
+--                             Left err -> print err
+--                             Right (binds, ts) -> 
+--                                 case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
+--                                     Left err -> print err
+--                                     Right res -> --print res
+--                                         do putStrLn (printSuperPolicy res)
+--         _ -> die "Usage:\n\
+--                 \ htpl file.htpl id1 id2"
 
 
 -- handleImports :: [Import] -> Either (IO String) LanguageOptions
@@ -189,9 +307,9 @@ test4 = "lang Access {ship, ship[bridge], ship[engine], ship[engine].fuzeBox}; \
 
 printSuperPolicy :: SuperPolicy -> String
 printSuperPolicy (SuperPolicy pols) = do "SuperPolicy:" ++  policiesToString pols
-    
-policiesToString :: [Policy] -> String 
-policiesToString (p1:[]) = do policyToString p1 
+
+policiesToString :: [Policy] -> String
+policiesToString (p1:[]) = do policyToString p1
 policiesToString (p1:pols) = do policyToString p1 ++ ", " ++ policiesToString pols
 
 
@@ -213,11 +331,11 @@ tdnsToString LTop = T.pack "*"
 tdnsToString LBot = T.pack "_"
 tdnsToString (TDNS ( Node (Atom f) (Leaf LTop)      (Leaf LTop)))  = f
 tdnsToString (TDNS ( Node (Atom f) (Leaf LTop)      (Leaf (Atom t))))   = T.pack $ getString f T.empty t
-tdnsToString (TDNS ( Node (Atom f) (Leaf (Atom s))  (Leaf LTop))) = T.pack $ getString f s T.empty 
+tdnsToString (TDNS ( Node (Atom f) (Leaf (Atom s))  (Leaf LTop))) = T.pack $ getString f s T.empty
 tdnsToString (TDNS ( Node (Atom f) (Leaf (Atom s))  (Leaf (Atom t))))   = T.pack $ getString f s t
 
 getString :: T.Text -> T.Text -> T.Text -> String
-getString one two three 
+getString one two three
     | two == T.empty && three == T.empty = T.unpack one
     | two == T.empty = (T.unpack one ) ++ "." ++ (T.unpack three )
     | three == T.empty =  (T.unpack one ) ++ "[" ++ (T.unpack two ) ++ "]"

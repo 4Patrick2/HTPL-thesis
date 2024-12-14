@@ -260,9 +260,6 @@ findPairs i1 group = do return $ map (\x -> (i1, x)) group
 
 findPairsGroupToId :: [Atom] -> Atom -> RunEnv [(Atom, Atom)]
 findPairsGroupToId group i2 = do return $ filter (\(x,y) -> x /= y) $ map (\x -> (x, i2)) group
--- findPairsGroupToId group i2 = do 
---     pairsWithDub <- map (\x -> (x, i2)) group
---     return $ filter (\(x,y) -> x /= y) pairsWithDub
 
 testMap :: Atom -> Atom -> Maybe (Atom, Atom)
 testMap i1 i2 
