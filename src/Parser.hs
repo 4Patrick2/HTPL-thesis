@@ -32,4 +32,4 @@ runImportParser f s =
 
 -- Parser function used for testing individual parsers.
 runLOParser :: String -> T.Text -> Either String LanguageOptions
-runLOParser f s = runParser pLangDef f s 
+runLOParser f s = runParser pLangDefs f s 

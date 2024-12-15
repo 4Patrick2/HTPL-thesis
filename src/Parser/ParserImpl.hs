@@ -12,6 +12,7 @@ import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import qualified Data.Text as T
 import qualified Data.Map.Strict        as M
+import AST (LanguageOptions)
 
 
 -- Network parser.
@@ -45,6 +46,15 @@ pLangDef = do
     return language
     <|> return M.empty
 
+
+pLangDefs :: Parser LanguageOptions
+pLangDefs = do
+    language <- M.fromList <$> sepBy pLangOption semicolon
+    _ <- dot
+    mergeMaps language <$> pLangDefs
+    <|> return M.empty
+
+
 -- Parse aspect tag and language options.
 pLangOption :: Parser (ATag, [ALang])
 pLangOption = do
@@ -57,13 +67,13 @@ pLangOption = do
 pExpressionsTop :: Parser [Expression]
 pExpressionsTop = try (do
     exps <- pExpressions
-    _ <- dot 
+    _ <- dot
     eof
     return exps)
     <|> do
     eof
     return []
-    <|> 
+    <|>
     fail "Did not reach the end of file during parsing."
 
 -- Parse Expression statements. End without period. Used within conditions. 
@@ -133,6 +143,6 @@ pGroup = do
 pPredicate :: Parser Expression
 pPredicate = try (do
     pString "group"; binding  <- variable; equal
-    pString "pred";  variable <- variable 
+    pString "pred";  variable <- variable
     pString "in";    p        <- braces preds
     return $ EPred binding variable p)

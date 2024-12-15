@@ -11,7 +11,7 @@ import qualified Text.Megaparsec.Char.Lexer as L
 import qualified Data.Text as T
 import GHC.Base (undefined)
 import qualified Data.Map.Strict        as M
-import Data.List (notElem)
+import Data.List (notElem, nub)
 
 -- Parser monad
 type Parser = Parsec Void T.Text
@@ -223,3 +223,23 @@ relation =
     <|> fail "Relation not properly formattet."
 
 
+--------------------
+-- Map functions ---
+--------------------
+mergeMaps :: LanguageOptions -> LanguageOptions -> LanguageOptions
+mergeMaps m1 m2 = do
+    -- keys <- M.keys m2
+    mergeMaps' m1 m2 (M.keys m2)
+
+
+mergeMaps' :: LanguageOptions -> LanguageOptions -> [ATag] -> LanguageOptions
+mergeMaps' m1 m2 (key:keys) = do
+    case M.lookup key m2 of
+        Nothing -> undefined
+        Just value2 -> do
+            case M.lookup key m1 of
+                Nothing -> do
+                    mergeMaps' (M.insert key value2  m1) m2 keys
+                Just value1 ->  do
+                    mergeMaps' (M.insert key (nub $ value1++value2) m1) m2 keys
+mergeMaps' m1 _m2 [] = m1
