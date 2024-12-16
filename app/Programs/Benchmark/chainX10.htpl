@@ -1,0 +1,13 @@
+lang Tag { aspect }.
+
+trust(id0, id1) with { Tag: aspect };
+trust(id1, id2) with { Tag: aspect };
+trust(id2, id3) with { Tag: aspect };
+trust(id3, id4) with { Tag: aspect };
+trust(id4, id5) with { Tag: aspect };
+trust(id5, id6) with { Tag: aspect };
+trust(id6, id7) with { Tag: aspect };
+trust(id7, id8) with { Tag: aspect };
+trust(id8, id9) with { Tag: aspect };
+trust(id9, id10) with { Tag: aspect };
+trust(id10, id11) with { Tag:aspect }.

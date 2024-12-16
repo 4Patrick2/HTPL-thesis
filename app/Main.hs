@@ -98,12 +98,9 @@ parseLO (s:ss) = do
                         Right merged
 
 
-
-
-
-
-
-
+-------------------------------------
+--- Pretty printing superpolicies ---
+-------------------------------------
 
 printSuperPolicy :: SuperPolicy -> String
 printSuperPolicy (SuperPolicy pols) = do "SuperPolicy:" ++  policiesToString pols

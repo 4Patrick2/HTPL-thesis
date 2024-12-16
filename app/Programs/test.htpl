@@ -1,0 +1,17 @@
+lang Access {gate, gate.open, gate.close, gate[front], gate[front].open}.
+
+trust(id1, id2) with {Access: gate.open}; 
+trust(id3, id2) with {Access: gate.close}; 
+
+trust(id1, id4) with {Access: gate.close}; 
+group Test = pred X in { id1, X: {Access: gate}}; 
+group Test2 = pred X in { X, id2: {Access: gate}}; 
+trust (id5, Test2) with {Access: gate.open};
+
+trust(id10, id20) with {Access: gate[front]}; 
+
+if (eval(id10, id20 = {Access: gate[front].open})) then {
+        trust(id40, id50) with {Access: gate.open}
+    } else {
+        trust(id40, id50) with {Access: gate.close}
+}.

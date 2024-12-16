@@ -1,0 +1,16 @@
+lang Tag { aspect1, aspect2 }.
+
+trust(source, target) with { Tag: aspect1 };
+when (eval(source, target = { Tag: aspect1 })) do {trust(id0, id1) with {Tag:aspect1}} otherwise {trust(id0, id1) with {Tag:aspect2}};
+when (eval(source, target = { Tag: aspect1 })) do {trust(id1, id2) with {Tag:aspect1}} otherwise {trust(id1, id2) with {Tag:aspect2}};
+when (eval(source, target = { Tag: aspect1 })) do {trust(id2, id3) with {Tag:aspect1}} otherwise {trust(id2, id3) with {Tag:aspect2}};
+when (eval(source, target = { Tag: aspect1 })) do {trust(id3, id4) with {Tag:aspect1}} otherwise {trust(id3, id4) with {Tag:aspect2}};
+when (eval(source, target = { Tag: aspect1 })) do {trust(id4, id5) with {Tag:aspect1}} otherwise {trust(id4, id5) with {Tag:aspect2}};
+when (eval(source, target = { Tag: aspect1 })) do {trust(id5, id6) with {Tag:aspect1}} otherwise {trust(id5, id6) with {Tag:aspect2}};
+when (eval(source, target = { Tag: aspect1 })) do {trust(id6, id7) with {Tag:aspect1}} otherwise {trust(id6, id7) with {Tag:aspect2}};
+when (eval(source, target = { Tag: aspect1 })) do {trust(id7, id8) with {Tag:aspect1}} otherwise {trust(id7, id8) with {Tag:aspect2}};
+when (eval(source, target = { Tag: aspect1 })) do {trust(id8, id9) with {Tag:aspect1}} otherwise {trust(id8, id9) with {Tag:aspect2}};
+when (eval(source, target = { Tag: aspect1 })) do {trust(id9, id10) with {Tag:aspect1}} otherwise {trust(id9, id10) with {Tag:aspect2}};
+when (eval(source, target = { Tag: aspect1 })) do {trust(id10, id11) with {Tag:aspect1}} otherwise {trust(id10, id11) with {Tag:aspect2}};
+when (eval(source, target = { Tag: aspect1 })) do {trust(id10, id11) with {Tag:aspect1}} otherwise {trust(id10, id11) with {Tag:aspect2}};
+trust(source, target) with { Tag: aspect2 }.

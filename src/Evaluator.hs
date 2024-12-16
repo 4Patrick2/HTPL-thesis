@@ -112,11 +112,21 @@ performQuery i1 i2 pts = do
 -- Compares a list of polices against a policy.
 comparePolicies :: [Policy] -> Policy -> RunEnv Value
 comparePolicies (p1:ps) (Policy p2) = do
+    -- res <- comparePolicy (Policy p2) p1 (M.keys p2) -- for predicate
     res <- comparePolicy p1 (Policy p2) (M.keys p2)
     (if res 
         then comparePolicies ps (Policy p2) 
         else return $ VBool False)
 comparePolicies [] (Policy p2) = do return $ VBool True
+
+comparePoliciesPredicate :: [Policy] -> Policy -> RunEnv Value
+comparePoliciesPredicate (p1:ps) (Policy p2) = do
+    res <- comparePolicy (Policy p2) p1 (M.keys p2) -- for predicate
+    -- res <- comparePolicy p1 (Policy p2) (M.keys p2)
+    (if res 
+        then comparePoliciesPredicate ps (Policy p2) 
+        else return $ VBool False)
+comparePoliciesPredicate [] (Policy p2) = do return $ VBool True
 
 -- Compare two polices.
 comparePolicy :: Policy -> Policy -> [Atom] -> RunEnv Bool
@@ -158,7 +168,8 @@ singlePredicate :: String -> Atom -> Policy -> [Atom] -> PreTrustStore -> RunEnv
 singlePredicate "receiver" i1 policy [] pts = do return []
 singlePredicate "receiver" i1 policy (user:users) pts = do
     res <- getPolicyList i1 user pts
-    comparison <- comparePolicies res policy
+    comparison <- comparePoliciesPredicate res policy
+    -- comparison <- comparePolicies policy res
     case comparison of
         VBool True -> do
             includedUsers <- singlePredicate "receiver" i1 policy users pts
@@ -169,7 +180,8 @@ singlePredicate "receiver" i1 policy (user:users) pts = do
 singlePredicate "sender" i2 policy [] pts = do return []
 singlePredicate "sender" i2 policy (user:users) pts = do
     res <- getPolicyList user i2 pts
-    comparison <- comparePolicies res policy
+    comparison <- comparePoliciesPredicate res policy
+    -- comparison <- comparePolicies res policy
     case comparison of
         VBool True -> do
             includedUsers <- singlePredicate "sender" i2 policy users pts
@@ -308,7 +320,7 @@ evalRelation (RIn id groupName) _pts = do relationIn id groupName
 evalRelation (RNot relation) pts = do
     res <- evalRelation relation pts
     return $ not res
-evalRelation (RSize i1 operator int) _pts = undefined
+evalRelation (RSize i1 operator int) _pts = relationSize i1 operator int
 
 relationEval :: Atom -> Atom -> Expression -> PreTrustStore -> RunEnv Bool
 relationEval i1 i2 (EPol policy) pts = do
