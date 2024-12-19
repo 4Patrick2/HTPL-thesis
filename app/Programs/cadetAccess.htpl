@@ -17,14 +17,14 @@ if (engine_cadet in EngineDepartment) then {
     trust(captain, engine_cadet) with {Access: ship[engine]._}
 } else {};
 
-if (eval(cheif_enginner, engine_cadet = {Equipment: tools[electric]})) then {
-    if (eval(cheif_enginner, engine_cadet = {Equipment: tools[blowtourch]})) then {
+if (eval(cheif_enginner, engine_cadet, {Equipment: tools[electric]})) then {
+    if (eval(cheif_enginner, engine_cadet, {Equipment: tools[blowtourch]})) then {
         trust(captain, engine_cadet) with {Access: ship[engine]}
     } else {
         trust(captain, engine_cadet) with {Access: ship[engine].fuzeBox}
     }
 } else {
-    if (eval(cheif_enginner, engine_cadet=  {Equipment: tools[blowtourch]})) then {
+    if (eval(cheif_enginner, engine_cadet,  {Equipment: tools[blowtourch]})) then {
         trust(captain, engine_cadet) with {Access: ship[engine]}
     } else {}
 }.

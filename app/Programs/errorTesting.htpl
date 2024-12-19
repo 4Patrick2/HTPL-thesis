@@ -1,0 +1,6 @@
+lang Tag {aspect1, aspect2}.
+
+#trust(id1, id2) with {Tag: aspect3}.
+#if (id in Group) then {} else {}.
+#trust(id1, id2) with FakePolicy.
+trust(Group1, Group2) with {Tag: aspect2}.

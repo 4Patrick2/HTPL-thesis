@@ -211,7 +211,7 @@ relation =
             RNot <$> relation
     <|> do  pString "eval";     symbol "("
             from <- user;       comma
-            to   <- user;       equal
+            to   <- user;       comma
             pol  <- pPolicy;    symbol ")"
             return $ REval from to pol
     <|> try (do name <- user

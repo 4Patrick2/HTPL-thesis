@@ -160,7 +160,7 @@ whenTests =
         runNetworkParser "" "when () do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}."
           @?= Left "1:7:\n  |\n1 | when () do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}.\n  |       ^\nRelation not properly formattet.\nUser name must begin with lower case character and can not contain special symbols.\nVariable name not properly formed.\n",
       testCase "When expression - Eval relation" $
-        runNetworkParser "" "when (eval(id1, id2 = Policy)) do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}."
+        runNetworkParser "" "when (eval(id1, id2, Policy)) do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}."
           @?= Right (Network {imp = [], lang = Language {langDef = M.fromList []}, exps = [EWhen (REval "id1" "id2" (EVar "Policy")) [EDel "id1" "id2" (EVar "Policy")] [EDel "id1" "id2" (EVar "Policy")]]}),
       testCase "When expression - Size relation Less" $
         runNetworkParser "" "when (Group < 10) do {trust(id1, id2) with Policy} otherwise {trust(id1, id2) with Policy}."
@@ -261,9 +261,9 @@ evalDel2 = "group SecurityDepartment = [guard_1, guard_2, guard_3]; trust (Secur
 policyTemplate = "policy Pol = {Access: gate[front]}; trust(id1, id2) with Pol."
 revocation = "trust(id1, id2) with {Access: gate}; trust(id1, id2) with {Access: _}."
 
-ifRelationEvalTrue = "trust(id1, id2) with {Access: gate}; if (eval(id1, id2 = {Access: gate})) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
-ifRelationEvalFalse = "trust(id1, id2) with {Access: gate[front].open}; if (eval(id1, id2 = {Access: gate})) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
-ifRelationEvalTrueSmallpolicy = "trust(id1, id2) with {Access: gate[front]}; if (eval(id1, id2 = {Access: gate[front].open})) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
+ifRelationEvalTrue = "trust(id1, id2) with {Access: gate}; if (eval(id1, id2, {Access: gate})) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
+ifRelationEvalFalse = "trust(id1, id2) with {Access: gate[front].open}; if (eval(id1, id2, {Access: gate})) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
+ifRelationEvalTrueSmallpolicy = "trust(id1, id2) with {Access: gate[front]}; if (eval(id1, id2, {Access: gate[front].open})) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
 
 ifRelationInTrue = "group SecurityDepartment = [guard_1, guard_2, guard_3]; if (guard_1 in SecurityDepartment) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
 ifRelationInFalse = "group SecurityDepartment = [guard_1, guard_2, guard_3]; if (guard_4 in SecurityDepartment) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
@@ -275,8 +275,8 @@ ifRelationSizeFalseEqual = "group SecurityDepartment = [guard_1, guard_2, guard_
 ifRelationSizeFalseLess = "group SecurityDepartment = [guard_1, guard_2, guard_3]; if (SecurityDepartment < 0) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
 ifRelationSizeFalseGreater = "group SecurityDepartment = [guard_1, guard_2, guard_3]; if (SecurityDepartment > 6) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
 
-ifRelationNotEvalTrue = "trust(id1, id2) with {Access: gate.open}; if (not eval(id1, id2 = {Access: gate})) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
-ifRelationNotEvalFalse = "trust(id1, id2) with {Access: gate}; if (not eval(id1, id2 = {Access: gate})) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
+ifRelationNotEvalTrue = "trust(id1, id2) with {Access: gate.open}; if (not eval(id1, id2, {Access: gate})) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
+ifRelationNotEvalFalse = "trust(id1, id2) with {Access: gate}; if (not eval(id1, id2, {Access: gate})) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
 
 ifRelationNotInTrue = "group SecurityDepartment = [guard_1, guard_2, guard_3]; if (not guard_4 in SecurityDepartment) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
 ifRelationNotInFalse = "group SecurityDepartment = [guard_1, guard_2, guard_3]; if (not guard_1 in SecurityDepartment) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
@@ -284,7 +284,8 @@ ifRelationNotInFalse = "group SecurityDepartment = [guard_1, guard_2, guard_3]; 
 ifRelationNotSizeTrue = "group SecurityDepartment = [guard_1, guard_2, guard_3]; if (not SecurityDepartment > 4) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
 ifRelationNotSizeFalse = "group SecurityDepartment = [guard_1, guard_2, guard_3]; if (not SecurityDepartment < 4) then {trust(id4, id5) with {Access: gate.open}} else {trust(id4, id5) with {Access: gate.close}}."
 
-predicate = "trust(id1, id2) with {Access: gate.open}; trust(id1, id4) with {Access: gate.close}; group Test = pred X in { id1, X: {Access: gate}}; trust (id5, Test) with {Access: gate.open}."
+predicate  = "trust(id1, id2) with {Access: gate.open}; trust(id1, id4) with {Access: gate.close}; group Test = pred X in { id1, X: {Access: gate}}; trust (id5, Test) with {Access: gate.open}."
+predicate2 = "trust(id1, id2) with {Access: gate.open}; trust(id4, id2) with {Access: gate.close}; group Test = pred X in { X, id2: {Access: gate}}; trust (id5, Test) with {Access: gate.open}."
 
 delegationTests :: TestTree
 delegationTests =
@@ -359,46 +360,34 @@ delegationTests =
       testCase "If: Not relation - Size false" $
         evalTest (lang_1 ++ ifRelationNotSizeFalse) "id4" "id5"
           @?= Right (SuperPolicy {policies = [Policy (M.fromList [("Access", TDNS (Node (Atom "gate") (Leaf LTop) (Leaf (Atom "close"))))])]}),
-      testCase "Predicate" $
+      testCase "Predicate 1" $
         evalTest (lang_1 ++ predicate) "id5" "id2"
-          @?= Right (SuperPolicy {policies = [Policy (M.fromList [("Access", TDNS (Node (Atom "gate") (Leaf LTop) (Leaf (Atom "open"))))])]})
-          -- Predicate sender 
-          -- Predicate reciever
-          -- for
-          -- when
+          @?= Right (SuperPolicy {policies = [Policy (M.fromList [("Access", TDNS (Node (Atom "gate") (Leaf LTop) (Leaf (Atom "open"))))])]}),
+
+      testCase "Predicate 2" $
+        evalTest (lang_1 ++ predicate2) "id5" "id1"
+          @?= Right (SuperPolicy {policies = [Policy (M.fromList [("Access", TDNS (Node (Atom "gate") (Leaf LTop) (Leaf (Atom "open"))))])]}),
+      
+      testCase "For" $
+        evalTest (lan ++ exp_for) "id2" "id1"
+          @?= Right (SuperPolicy {policies = [Policy (M.fromList [("Music",LBot),("Tag",TDNS (Node (Atom "aspect2") (Leaf LTop) (Leaf LTop))),("Tag_",LBot)])]}),
+
+      testCase "when - true" $
+        evalTest (lan ++ exp_when_true) "id2" "id3"
+          @?= Right (SuperPolicy {policies = [Policy (M.fromList [("Music",LBot),("Tag",TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop))),("Tag_",LBot)]),Policy (M.fromList [("Music",LBot),("Tag",TDNS (Node (Atom "aspect2") (Leaf LTop) (Leaf LTop))),("Tag_",LBot)])]}),
+
+      testCase "when - false" $
+        evalTest (lan ++ exp_when_false) "id2" "id3"
+          @?= Right (SuperPolicy {policies = [Policy (M.fromList [("Music",LBot),("Tag",TDNS (Node (Atom "aspect2") (Leaf LTop) (Leaf LTop))),("Tag_",LBot)])]})
     ]
 
-im = "import language.lan."
 
-lan = "lang Tag_ {aspect1, aspect1[leaf1], aspect1.leaf2, aspect2@_-$}; lang Music {Pop, rock, rock.alternative, rock.heavy}."
 
-expres = "trust(id1, id2) with {Tag: aspect1}; trust(id2, id3) with {Tag: aspect1[leaf1]}."
+lan = "lang Tag {aspect1, aspect2}; lang Tag_ {aspect1, aspect1[leaf1], aspect1.leaf2, aspect2@_-$}; lang Music {Pop, rock, rock.alternative, rock.heavy}."
+exp_for = "group One = [id2, id3];  trust(id1, One) with {Tag: aspect1}; for X where {id1, X: {Tag: aspect1}} do  {trust(X, id1) with {Tag: aspect2}}."
+exp_when_false = "when (eval(id1,id2, {Tag: aspect1})) do {trust(id2, id3) with {Tag: aspect1}} otherwise {trust(id2, id3) with {Tag: aspect2}}."
+exp_when_true = "when (eval(id1,id2, {Tag: aspect1})) do {trust(id2, id3) with {Tag: aspect1}} otherwise {trust(id2, id3) with {Tag: aspect2}; trust(id1,id2) with {Tag: aspect1}}."
 
--- expres = "group One = [id1, id2, id3]; trust(id2, id3) with {Tag: aspect1[leaf1]}; trust(id1, id2) with {Tag: aspect1}."
-exp_if = "group One = [id1, id2, id3]; if (id4 in One) then {trust(id1, id2) with {Tag: aspect1}} else {trust(id1, id2) with {Tag: aspect2}}."
 
-exp_if_eval = "trust(id1, id2) with {Tag: aspect1}; if (eval(id1,id2: {Tag: aspect1})) then {trust(id1, id3) with {Tag: aspect1}.} else {trust(id1, id3) with {Tag: aspect2}.}."
 
-exp_group = "group One = [id2, id3]; trust(One, id1) with {Tag: aspect1}."
 
-exp_pred = "group One = [id2, id3]; trust(id1, One) with {Tag: aspect1}; group Two = pred X in {id1, X: {Tag: aspect1}}; trust(Two, id1) with {Tag: aspect2}."
-
-exp_pred2 = "group One = [id2, id3]; trust(One, id1) with {Tag: aspect1}; group Two = pred X in {X, id1: {Tag: aspect1}}; trust(id1, Two) with {Tag: aspect2}."
-
-exp_tmp = "policy Pol = {Tag: aspect1.leaf2}; trust(id1, id2) with Pol."
-
-exp_for = "group One = [id2, id3];  trust(id1, One) with {Tag: aspect1}; for (X) where {id1, X: {Tag: aspect1}} do  {trust(X, id1) with {Tag: aspect2}.}."
-
-exp_when_false = "when (eval(id1,id2: {Tag: aspect1})) do {trust(id2, id3) with {Tag: aspect1}} otherwise {trust(id2, id3) with {Tag: aspect2}}."
-
-exp_when_true = "when (eval(id1,id2: {Tag: aspect1})) do {trust(id2, id3) with {Tag: aspect1}} otherwise {trust(id2, id3) with {Tag: aspect2}; trust(id1,id2) with {Tag: aspect1}}."
-
-exp_trust = "trust(id2, id3) with {Tag_: aspect2@_-$}."
-
-exp_trust_with_more = "trust(id2, id3) with {Tag_: aspect2@_-$}. trust(id4,id6) with {Tag_: aspect1}"
-
-exp_empty = ""
-
-simple = "lang Tag {aspect1}. trust(id1, id2) with {Tag: aspect1}."
-
-test2 = "group Name = [group]."

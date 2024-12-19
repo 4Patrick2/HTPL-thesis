@@ -6,7 +6,7 @@ trust (dma, buoy2) with {Nav: buoy[Suezmax]};
 for X where {
     dma, X:  {Nav :buoy}
 } do {
-    when (eval(dma, X = {Nav: bouy[Capesize]})) do {
+    when (eval(dma, X, {Nav: bouy[Capesize]})) do {
         trust (captain, X) with {Nav: [Capesize]}
     } otherwise {
         trust (captain, buoy1) with {Nav: revoked}

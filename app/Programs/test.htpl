@@ -10,7 +10,7 @@ trust (id5, Test2) with {Access: gate.open};
 
 trust(id10, id20) with {Access: gate[front]}; 
 
-if (eval(id10, id20 = {Access: gate[front].open})) then {
+if (eval(id10, id20, {Access: gate[front].open})) then {
         trust(id40, id50) with {Access: gate.open}
     } else {
         trust(id40, id50) with {Access: gate.close}

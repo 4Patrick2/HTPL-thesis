@@ -27,6 +27,7 @@ library
   exposed-modules:
       AST
       Env
+      Errors
       Evaluator
       Parser
       Parser.Lexer

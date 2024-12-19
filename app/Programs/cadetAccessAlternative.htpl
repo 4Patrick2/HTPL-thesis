@@ -13,14 +13,14 @@ trust (captain, DeckDepartment) with DeckAccess;
 
 trust (chief_enginner, engine_cadet) with {Equipment: tools[electric]};
 
-if (eval(chief_enginner, engine_cadet = {Equipment: tools[electric]})) then {
-    if (eval(chief_enginner, engine_cadet = {Equipment: tools[blowtourch]})) then {
+if (eval(chief_enginner, engine_cadet, {Equipment: tools[electric]})) then {
+    if (eval(chief_enginner, engine_cadet, {Equipment: tools[blowtourch]})) then {
         trust(captain, engine_cadet) with {Access: ship[engine]}
     } else {
         trust(captain, engine_cadet) with {Access: ship[engine].fuzeBox}
     }
 } else {
-    if (eval(chief_enginner, engine_cadet=  {Equipment: tools[blowtourch]})) then {
+    if (eval(chief_enginner, engine_cadet, {Equipment: tools[blowtourch]})) then {
         trust(captain, engine_cadet) with {Access: ship[engine]}
     } else {}
 }.
