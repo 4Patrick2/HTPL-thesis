@@ -47,7 +47,7 @@ library:
   - simulator
 
 executables:
-  HTPL-thesis-exe:
+  HTPL:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
