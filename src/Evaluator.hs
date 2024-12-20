@@ -30,6 +30,7 @@ runEvaluator network env = do
 
 ----- Code from TPL Simulator ------
 type PreTrustStore = MM.MultiMap (Atom, Atom) SuperPolicy
+
 -- | Simulating the delegations to be executed locally be each entity
 toTrustStore :: PreTrustStore -> TPL.TrustStore
 toTrustStore pstore = M.foldrWithKey ( \(i1, i2) pols acc ->
@@ -50,16 +51,18 @@ evalStatements [] pts = processWhen pts
 
 evalStatement :: Expression -> PreTrustStore -> RunEnv PreTrustStore
 evalStatement (EIf r e1 e2) pts         = do evalIf r e1 e2 pts
-evalStatement (EWhen r e1 e2) pts       = do evalWhen r e1 e2 pts -- When statement
+evalStatement (EWhen r e1 e2) pts       = do evalWhen r e1 e2 pts 
 evalStatement (EImp a r es) pts         = do evalFor a r es pts
 evalStatement (EDel user1 user2 e) pts  = do evalDelegations user1 user2 e pts
-evalStatement (EGroup name members) pts = do -- MISSING: What if group is predicate
+evalStatement (EGroup name members) pts = do 
     group <- evalGroup members
     withBinding name group
     return pts
+
 evalStatement (EPol ps) pts             = do
     _ <- evalPolicy (EPol ps)
     return pts
+
 evalStatement (EPolTmp a (EPol pol)) pts = do
     evalPolicyTemplate a pol
     return pts
@@ -112,7 +115,6 @@ performQuery i1 i2 pts = do
 -- Compares a list of polices against a policy.
 comparePolicies :: [Policy] -> Policy -> RunEnv Value
 comparePolicies (p1:ps) (Policy p2) = do
-    -- res <- comparePolicy (Policy p2) p1 (M.keys p2) -- for predicate
     res <- comparePolicy p1 (Policy p2) (M.keys p2)
     (if res 
         then comparePolicies ps (Policy p2) 
@@ -121,8 +123,7 @@ comparePolicies [] (Policy p2) = do return $ VBool True
 
 comparePoliciesPredicate :: [Policy] -> Policy -> RunEnv Value
 comparePoliciesPredicate (p1:ps) (Policy p2) = do
-    res <- comparePolicy (Policy p2) p1 (M.keys p2) -- for predicate
-    -- res <- comparePolicy p1 (Policy p2) (M.keys p2)
+    res <- comparePolicy (Policy p2) p1 (M.keys p2) 
     (if res 
         then comparePoliciesPredicate ps (Policy p2) 
         else return $ VBool False)
@@ -241,8 +242,8 @@ checkPolicy' [] = return True
 -- Policy template expression: Checks policy and adds to state. 
 evalPolicyTemplate :: Atom -> Policy -> RunEnv()
 evalPolicyTemplate name policy = do
-    _ <- checkPolicy policy -- Verify policy contains language options.
-    withBinding name (VPol policy) -- Bind policy to name.
+    _ <- checkPolicy policy         -- Verify policy contains language options.
+    withBinding name (VPol policy)  -- Bind policy to name.
 
 -------------------
 --- Delegations ---
@@ -256,7 +257,7 @@ addUser user = do
     key <- createAtom "users"
     userList <- gets (M.lookup key)
     case userList of
-        Just (VUsers l) -> do -- List already initialized
+        Just (VUsers l) -> do       -- List already initialized
             lift . modify $ M.insert key (VUsers (nub $ l++[user]))
         Nothing ->
             lift . modify $ M.insert key (VUsers [user])
@@ -323,14 +324,16 @@ evalRelation (RNot relation) pts = do
 evalRelation (RSize i1 operator int) _pts = relationSize i1 operator int
 
 relationEval :: Atom -> Atom -> Expression -> PreTrustStore -> RunEnv Bool
-relationEval i1 i2 (EPol policy) pts = do
+relationEval i1 i2 policy pts = do
+    pol <- evalPolicy policy
     query <- getPolicyList i1 i2 pts
-    comparisonResult <- comparePolicies query policy
+    comparisonResult <- comparePolicies query pol
     case comparisonResult of
         VBool True  -> return True
         VBool False -> return False
         _ -> throwError $ DefaultError "Something went wrong!"
-relationEval _i1 _i2 _Exp _pts = throwError $ DefaultError "Something went wrong!"
+
+relationEval _i1 _i2 _Exp _pts = throwError $ DefaultError "Relation failed!"
 
 relationIn :: Atom -> VName -> RunEnv Bool
 relationIn name groupName = do

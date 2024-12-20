@@ -78,8 +78,6 @@ pExpressionsTop = try (do
 
 -- Parse Expression statements. End without period. Used within conditions. 
 pExpressions :: Parser [Expression]
--- pExpressions = try (do
---     sepBy pExpression semicolon)
 pExpressions = do
     sepBy pExpression semicolon
     <|> return []
@@ -122,7 +120,7 @@ pImplication = do
 
 pDelegation :: Parser Expression
 pDelegation = do
-    pString "trust"; symbol "(";
+    pString "trust";           symbol "(";
     from <- userOrVariable;    comma
     to <- userOrVariable;      symbol ")"
     pString "with"

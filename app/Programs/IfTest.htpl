@@ -1,0 +1,8 @@
+lang Tag {aspect1}.
+
+policy Tmp = {Tag: aspect1};
+trust (id1, id2) with Tmp;
+
+when (eval(id1, id2, Tmp)) do {
+    trust (id3, id2) with Tmp
+} otherwise {}.

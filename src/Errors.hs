@@ -30,7 +30,7 @@ printErrors err = do
 -------------------------------------
 
 printSuperPolicy :: SuperPolicy -> String
-printSuperPolicy (SuperPolicy pols) = do "SuperPolicy:" ++  policiesToString pols
+printSuperPolicy (SuperPolicy pols) = do "SuperPolicy: " ++  policiesToString pols
 
 policiesToString :: [Policy] -> String
 policiesToString (p1:[]) = do policyToString p1

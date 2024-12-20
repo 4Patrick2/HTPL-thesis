@@ -6,11 +6,11 @@ cabal-version: 2.2
 
 name:           HTPL-thesis
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/HTPL-thesis#readme>
-homepage:       https://github.com/githubuser/HTPL-thesis#readme
-bug-reports:    https://github.com/githubuser/HTPL-thesis/issues
-author:         Author name here
-maintainer:     example@example.com
+description:    Please see the README on GitHub at <https://github.com/4Patrick2/HTPL-thesis#readme>
+homepage:       https://github.com/4Patrick2/HTPL-thesis#readme
+bug-reports:    https://github.com/4Patrick2/HTPL-thesis/issues
+author:         Patrick Mørch
+maintainer:     fmp334@alumni.ku.dk
 copyright:      2024 Author name here
 license:        BSD-3-Clause
 license-file:   LICENSE
@@ -21,7 +21,7 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/HTPL-thesis
+  location: https://github.com/4Patrick2/HTPL-thesis
 
 library
   exposed-modules:
@@ -71,7 +71,7 @@ library
   hs-source-dirs:
       src
       simulator
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-incomplete-patterns -Wno-unused-top-binds -Wtype-defaults -Wno-missing-signatures -Wno-unused-matches -Wno-name-shadowing -Wno-overlapping-patterns -Wno-unused-do-bind -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-incomplete-patterns -Wno-unused-top-binds -Wtype-defaults -Wno-missing-signatures -Wno-unused-matches -Wno-name-shadowing -Wno-unused-imports -Wno-overlapping-patterns -Wno-unused-do-bind
   build-depends:
       base >=4.7 && <5
     , containers
@@ -92,7 +92,7 @@ executable HTPL
       Paths_HTPL_thesis
   hs-source-dirs:
       app
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-incomplete-patterns -Wno-unused-top-binds -Wtype-defaults -Wno-missing-signatures -Wno-unused-matches -Wno-name-shadowing -Wno-overlapping-patterns -Wno-unused-do-bind -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-incomplete-patterns -Wno-unused-top-binds -Wtype-defaults -Wno-missing-signatures -Wno-unused-matches -Wno-name-shadowing -Wno-unused-imports -Wno-overlapping-patterns -Wno-unused-do-bind
   build-depends:
       HTPL-thesis
     , base >=4.7 && <5
@@ -115,7 +115,7 @@ test-suite HTPL-thesis-test
       Paths_HTPL_thesis
   hs-source-dirs:
       test
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-incomplete-patterns -Wno-unused-top-binds -Wtype-defaults -Wno-missing-signatures -Wno-unused-matches -Wno-name-shadowing -Wno-overlapping-patterns -Wno-unused-do-bind -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wno-incomplete-patterns -Wno-unused-top-binds -Wtype-defaults -Wno-missing-signatures -Wno-unused-matches -Wno-name-shadowing -Wno-unused-imports -Wno-overlapping-patterns -Wno-unused-do-bind
   build-depends:
       HTPL-thesis
     , base >=4.7 && <5

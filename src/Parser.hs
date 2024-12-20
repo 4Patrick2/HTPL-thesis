@@ -30,6 +30,6 @@ runImportParser f s =
         Left err -> Left $ P.errorBundlePretty err
         Right r -> Right r 
 
--- Parser function used for testing individual parsers.
+-- Parser function used for parsing language options in imported files.
 runLOParser :: String -> T.Text -> Either String LanguageOptions
 runLOParser f s = runParser pLangDefs f s 

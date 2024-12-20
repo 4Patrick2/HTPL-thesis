@@ -36,27 +36,7 @@ data EvalError =
     deriving (Eq, Show)
 
 
--- mergeMaps :: LanguageOptions -> LanguageOptions -> LanguageOptions
--- mergeMaps m1 m2 = do
---     -- keys <- M.keys m2
---     mergeMaps' m1 m2 (M.keys m2)
-
-
--- mergeMaps' :: LanguageOptions -> LanguageOptions -> [ATag] -> LanguageOptions
--- mergeMaps' m1 m2 (key:keys) = do
---     case M.lookup key m2 of
---         Nothing -> undefined
---         Just value2 -> do
---             case M.lookup key m1 of
---                 Nothing -> do
---                     mergeMaps' (M.insert key value2  m1) m2 keys
---                 Just value1 ->  do
---                     mergeMaps' (M.insert key (nub $ value1++value2) m1) m2 keys
--- mergeMaps' m1 _m2 [] = m1
-
-
-
-
+-- Run the evaluator in the test environment.
 evalTest :: String -> String -> String -> Either EvalError SuperPolicy
 evalTest network id1 id2 = do
     case (runNetworkParser "" (T.pack network)) of 
