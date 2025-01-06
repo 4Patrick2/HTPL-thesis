@@ -1,6 +1,6 @@
 module Errors (
       printSuperPolicy
-    -- , printErrors
+    , printErrors
     ) where
 
         
@@ -10,21 +10,19 @@ import Env
 import AST
 
 
--- printErrors :: Errors -> String
--- printErrors err = do 
---     case err of
---         NoGroup -> do "There is no group defined."
---         NoRelation -> do "There is no relation."  
---         NoBindingForVariable a -> do "No available binding for variable " ++ T.unpack(a) ++ "."    
---         NoBindingForPolicy a -> do "No available binding for policy " ++ T.unpack(a) ++ "."    
---         UnsupportedOperation s -> do "Unsuported operation: " ++ s
---         NoLanguageOption at al -> do "The aspect tag "++T.unpack(at) ++ " has no langauge option " ++ T.unpack(tdnsToString al)
---         DefaultError s -> do "An error has occurred: " ++ s
---         BadPredicate s -> do "Invalid predicate: " ++ s
---         BadComparison -> do "Invalid comparison operator."
---         Debug (VTmp a1 a2) -> do "Debug: x = " ++ T.unpack(a1) ++ ", m = " ++ T.unpack a2
---         Debug (DMsg s) -> do "Debug: " ++ s
---         -- Debug (VWhen whens) -> "Debug: " ++ whens
+printErrors :: Errors -> String
+printErrors err = do 
+    case err of
+        NoGroup -> do "There is no group defined."
+        NoRelation -> do "There is no relation."  
+        NoBindingForVariable a -> do "No available binding for variable " ++ T.unpack(a) ++ "."    
+        NoBindingForPolicy a -> do "No available binding for policy " ++ T.unpack(a) ++ "."    
+        UnsupportedOperation s -> do "Unsuported operation: " ++ s
+        NoLanguageOption at al -> do "The aspect tag "++T.unpack(at) ++ " has no langauge option " ++ T.unpack(tdnsToString al)
+        DefaultError s -> do "An error has occurred: " ++ s
+        BadPredicate s -> do "Invalid predicate: " ++ s
+        BadComparison -> do "Invalid comparison operator."
+
 
 
 

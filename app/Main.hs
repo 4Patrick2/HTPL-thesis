@@ -28,8 +28,7 @@ main = do
                         Right parse ->
                             let (lo,tt) = runSpecification (lang parse) in
                                 case runEvaluator parse (lo,tt) of
-                                    -- Left err -> do putStrLn $ printErrors err
-                                    Left err -> print err
+                                    Left err -> do putStrLn $ printErrors err
                                     Right (_binds, ts) ->
                                         case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
                                             Left err -> print err
@@ -46,8 +45,7 @@ main = do
                                     let merged = mergeMaps (langDef (lang parse)) lo_imp in
                                     let (lo,tt) = runSpecification (Language {langDef = merged}) in
                                         case runEvaluator parse (lo,tt) of
-                                            -- Left err -> do putStrLn $ printErrors err
-                                            Left err -> print err
+                                            Left err -> do putStrLn $ printErrors err
                                             Right (_binds, ts) ->
                                                 case TPL.performComputation (T.pack id1) (T.pack id2) tt ts of
                                                     Left err -> print err
