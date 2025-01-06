@@ -403,38 +403,6 @@ relationEval i1 i2 policy pts = do
         VBool False -> return False
         _ -> throwError $ DefaultError "Something went wrong!"
 
--- For addition
--- relationEval :: Atom -> Atom -> Expression -> PreTrustStore -> RunEnv Bool
--- relationEval i1 i2 policy pts = do
---     tmp <- createAtom "tmp"
---     lookup <- gets (M.lookup tmp)
---     case lookup of
---         Just (VTmp x val) -> do
---             case relationEvalIntermediary x i1 i2 of
---                 1 -> do relationEvalEvaluation i1 val policy pts
---                 2 -> do relationEvalEvaluation val i2 policy pts
---                 3 -> do relationEvalEvaluation i1 i2  policy pts
---                 4 -> do throwError $ DefaultError "Eval values can not be the same values!"
---         Nothing -> do relationEvalEvaluation i1 i2  policy pts
-
--- relationEvalIntermediary :: Atom -> Atom -> Atom -> Int
--- relationEvalIntermediary x i1 i2
---     | x == i1 && x == i2 = do 4
---     | x == i2 && x == i1 = do 4
---     | i2 == x = 1
---     | i1 == x = 2
---     | otherwise = do 3
-
--- relationEvalEvaluation :: Atom -> Atom -> Expression -> PreTrustStore -> RunEnv Bool
--- relationEvalEvaluation i1 i2 policy pts = do
---     pol <- evalPolicy policy
---     query <- getPolicyList i1 i2 pts
---     comparisonResult <- comparePolicies query pol
---     case comparisonResult of
---         VBool True  -> return True
---         VBool False -> return False
---         _ -> throwError $ DefaultError "Something went wrong!"
--- relationEvalEvaluation _i1 _i2 _Exp _pts = throwError $ DefaultError "Relation failed!"
 
 -----------------------------------------------
 
@@ -488,40 +456,6 @@ evalWhen relation exps1 exps2 pts = do
                 _ <- withBinding key (VWhen [w])
                 return new_pts
 
--- For addition
--- evalWhen :: Relation -> [Expression] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore
--- evalWhen relation exps1 exps2 pts = do
---     tmp <- createAtom "tmp"
---     lookup <- gets (M.lookup tmp)
---     case lookup of
---         Just (VTmp x val) ->
---             let newRelation = changeRelation relation x val in do
---             r_res <- evalRelation newRelation pts
---             new_pts <- evalIf newRelation exps1 exps2 pts
---             key <- createAtom "when"
---             whenProcess <- gets (M.lookup key)
---             let w = (r_res, newRelation, exps1, exps2) in do
---                 case whenProcess of
---                     Just (VWhen whens) -> do
---                         _ <- withBinding key (VWhen (nub $ w:whens))
---                         return new_pts
---                     Nothing -> do
---                         _ <- withBinding key (VWhen [w])
---                         return new_pts
---         Nothing -> do
---             r_res <- evalRelation relation pts
---             new_pts <- evalIf relation exps1 exps2 pts
---             key <- createAtom "when"
---             whenProcess <- gets (M.lookup key)
---             let w = (r_res, relation, exps1, exps2) in do
---                 case whenProcess of
---                     Just (VWhen whens) -> do
---                         _ <- withBinding key (VWhen (nub $ w:whens))
---                         return new_pts
---                     Nothing -> do
---                         _ <- withBinding key (VWhen [w])
---                         return new_pts
-
 
 
 -- Checks if a "when" key exists in the bindings. Goes through values if it exists. 
@@ -565,31 +499,6 @@ relationIntermediary x from to
     | x == from = do 2
     | otherwise = do 3
 
--- evalTest :: Relation -> RunEnv Relation
--- evalTest (REval from to exps) = do
---     tmp <- createAtom "tmp"
---     lookup <- gets (M.lookup tmp)
---     case lookup of
---         Just (VTmp x val) -> do
---             case relationIntermediary x from to of
---                 1 -> return $  REval from to exps
---                 2 -> return $ REval from to exps
---                 3 -> return $ REval from to exps
---         Nothing -> return $ REval from to exps
-
----------------------
---- For statement ---
----------------------
--- evalFor :: Atom -> [Pred] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore
--- evalFor x predicates expressions pts = do
---     key <- createAtom "users"
---     listOfUsers <- gets (M.lookup key)
---     case listOfUsers of
---         Just (VUsers users) -> do
---             evalPredicates x x predicates pts users
---             evalStatements expressions pts
---         Nothing -> throwError $ DefaultError "No users in system"
---         _ -> throwError $ DefaultError "Something went wrong!"
 
 
 -- New for: Functions as for loop
