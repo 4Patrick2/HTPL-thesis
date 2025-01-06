@@ -17,6 +17,9 @@ data Value =
     | VBool Bool
     | VSuperPolicy [Policy]
     | VWhen [(Bool, Relation, [Expression], [Expression])] 
+    -- For additions
+    | VTmp Atom Atom
+    | DMsg String
   deriving (Eq, Show)
 
 type Bindings = M.Map Atom Value

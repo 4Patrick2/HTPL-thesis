@@ -15,6 +15,7 @@ import TPL.API as TPL
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.MultiMap as MM
+import GHC.Base (undefined)
 
 
 
@@ -51,10 +52,17 @@ evalStatements [] pts = processWhen pts
 
 evalStatement :: Expression -> PreTrustStore -> RunEnv PreTrustStore
 evalStatement (EIf r e1 e2) pts         = do evalIf r e1 e2 pts
-evalStatement (EWhen r e1 e2) pts       = do evalWhen r e1 e2 pts 
-evalStatement (EImp a r es) pts         = do evalFor a r es pts
+evalStatement (EWhen r e1 e2) pts       = do evalWhen r e1 e2 pts
+-------------------
+-- evalStatement (EImp a r es) pts         = do evalFor a r es pts
+
+evalStatement (EImp a r es) pts         = do evalForPred a r es pts
+evalStatement (EFor x g es) pts         = do evalFor x g es pts
+evalStatement (EForExplicit x g es) pts = do evalForExplicit x g es pts
+
+-------------------
 evalStatement (EDel user1 user2 e) pts  = do evalDelegations user1 user2 e pts
-evalStatement (EGroup name members) pts = do 
+evalStatement (EGroup name members) pts = do
     group <- evalGroup members
     withBinding name group
     return pts
@@ -90,6 +98,15 @@ lookupBinding a = do
         Just v -> return v
         Nothing -> throwError $ NoBindingForVariable a
 
+-- For addition
+-- -- Finds a value in the bindings.
+-- lookupBindVal :: Atom -> Value
+-- lookupBindVal a = do
+--     t <- gets (M.lookup a)
+--     case t of
+--         Just v -> v
+--         Nothing -> throwError $ NoBindingForVariable a
+
 -- Add every user to user list.
 evalGroup :: [Atom] -> RunEnv Value
 evalGroup g = do
@@ -116,16 +133,16 @@ performQuery i1 i2 pts = do
 comparePolicies :: [Policy] -> Policy -> RunEnv Value
 comparePolicies (p1:ps) (Policy p2) = do
     res <- comparePolicy p1 (Policy p2) (M.keys p2)
-    (if res 
-        then comparePolicies ps (Policy p2) 
+    (if res
+        then comparePolicies ps (Policy p2)
         else return $ VBool False)
 comparePolicies [] (Policy p2) = do return $ VBool True
 
 comparePoliciesPredicate :: [Policy] -> Policy -> RunEnv Value
 comparePoliciesPredicate (p1:ps) (Policy p2) = do
-    res <- comparePolicy (Policy p2) p1 (M.keys p2) 
-    (if res 
-        then comparePoliciesPredicate ps (Policy p2) 
+    res <- comparePolicy (Policy p2) p1 (M.keys p2)
+    (if res
+        then comparePoliciesPredicate ps (Policy p2)
         else return $ VBool False)
 comparePoliciesPredicate [] (Policy p2) = do return $ VBool True
 
@@ -275,12 +292,65 @@ findPairsGroupToId :: [Atom] -> Atom -> RunEnv [(Atom, Atom)]
 findPairsGroupToId group i2 = do return $ filter (\(x,y) -> x /= y) $ map (\x -> (x, i2)) group
 
 testMap :: Atom -> Atom -> Maybe (Atom, Atom)
-testMap i1 i2 
+testMap i1 i2
     | i1 == i2 = Just (i1, i2)
     | otherwise = Nothing
 
+-- evalDelegations :: Atom -> Atom -> Expression -> PreTrustStore -> RunEnv PreTrustStore
+-- evalDelegations i1 i2 ePol pts = do
+--     pol <- evalPolicy ePol
+--     i1_group <- gets (M.lookup i1)
+--     i2_group <- gets (M.lookup i2)
+--     case i1_group of
+--         -- Idendity 1 is a group
+--         Just (VGroup g1) -> do
+--             case i2_group of
+--                 Just g2 -> throwError $ UnsupportedOperation "Groups can not delegate trust to groups!"
+--                 Nothing -> do
+--                     pairs <- findPairsGroupToId g1 i2
+--                     return $ foldl (dele pol) pts pairs
+--                     where
+--                         dele pol pts (g_i1, i2) = MM.insert (g_i1, i2)  (SuperPolicy [pol]) pts
+
+--         -- Idendity 1 is a user
+--         Nothing -> do
+--             addUser i1
+--             case i2_group of
+--                 -- Idendity 2 is a group
+--                 Just (VGroup g2) -> do
+--                     pairs <- findPairs i1 g2
+--                     return $ foldl (dele pol) pts pairs
+--                     where
+--                         dele pol pts (i1,g_i2) = MM.insert (i1,g_i2) (SuperPolicy [pol]) pts
+--                 -- Idendity 2 is a user
+--                 Nothing -> do
+--                     addUser i2
+--                     return $ MM.insert (i1, i2) (SuperPolicy [pol]) pts
+
+-- For addition
 evalDelegations :: Atom -> Atom -> Expression -> PreTrustStore -> RunEnv PreTrustStore
 evalDelegations i1 i2 ePol pts = do
+    tmp <- createAtom "tmp"
+    lookup <- gets (M.lookup tmp)
+    case lookup of
+        Just (VTmp x xBinding) -> do
+            case deleIntermidiary x i1 i2 of
+                1 -> do delegations i1 xBinding ePol pts
+                2 -> do delegations xBinding i2 ePol pts
+                3 -> do throwError $ DefaultError "Both values cant be variables."
+                4 -> do delegations i1 i2 ePol pts
+        Nothing   -> do delegations i1 i2 ePol pts
+
+deleIntermidiary :: Atom -> Atom -> Atom -> Int
+deleIntermidiary x i1 i2
+    | x == i1 && x == i2 = do 3
+    | x == i2 && x == i1 = do 3
+    | x == i2 = do 1
+    | x == i1 = do 2
+    | otherwise = do 4
+
+delegations :: Atom -> Atom -> Expression -> PreTrustStore -> RunEnv PreTrustStore
+delegations i1 i2 ePol pts = do
     pol <- evalPolicy ePol
     i1_group <- gets (M.lookup i1)
     i2_group <- gets (M.lookup i2)
@@ -333,7 +403,40 @@ relationEval i1 i2 policy pts = do
         VBool False -> return False
         _ -> throwError $ DefaultError "Something went wrong!"
 
-relationEval _i1 _i2 _Exp _pts = throwError $ DefaultError "Relation failed!"
+-- For addition
+-- relationEval :: Atom -> Atom -> Expression -> PreTrustStore -> RunEnv Bool
+-- relationEval i1 i2 policy pts = do
+--     tmp <- createAtom "tmp"
+--     lookup <- gets (M.lookup tmp)
+--     case lookup of
+--         Just (VTmp x val) -> do
+--             case relationEvalIntermediary x i1 i2 of
+--                 1 -> do relationEvalEvaluation i1 val policy pts
+--                 2 -> do relationEvalEvaluation val i2 policy pts
+--                 3 -> do relationEvalEvaluation i1 i2  policy pts
+--                 4 -> do throwError $ DefaultError "Eval values can not be the same values!"
+--         Nothing -> do relationEvalEvaluation i1 i2  policy pts
+
+-- relationEvalIntermediary :: Atom -> Atom -> Atom -> Int
+-- relationEvalIntermediary x i1 i2
+--     | x == i1 && x == i2 = do 4
+--     | x == i2 && x == i1 = do 4
+--     | i2 == x = 1
+--     | i1 == x = 2
+--     | otherwise = do 3
+
+-- relationEvalEvaluation :: Atom -> Atom -> Expression -> PreTrustStore -> RunEnv Bool
+-- relationEvalEvaluation i1 i2 policy pts = do
+--     pol <- evalPolicy policy
+--     query <- getPolicyList i1 i2 pts
+--     comparisonResult <- comparePolicies query pol
+--     case comparisonResult of
+--         VBool True  -> return True
+--         VBool False -> return False
+--         _ -> throwError $ DefaultError "Something went wrong!"
+-- relationEvalEvaluation _i1 _i2 _Exp _pts = throwError $ DefaultError "Relation failed!"
+
+-----------------------------------------------
 
 relationIn :: Atom -> VName -> RunEnv Bool
 relationIn name groupName = do
@@ -347,7 +450,6 @@ relationSize groupName op size = do
     search <- lookupBinding groupName
     case search of
         VGroup group -> do
-            -- group_size <- length group
             case op of
                 Less    -> return (length group <  size)
                 Greater -> return (length group >  size)
@@ -365,21 +467,6 @@ evalIf relation exps1 exps2 pts = do
     if r_res
         then (do evalStatements exps1 pts)
         else (do evalStatements exps2 pts)
-
-
----------------------
---- For statement ---
----------------------
-evalFor :: Atom -> [Pred] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore
-evalFor x predicates expressions pts = do
-    key <- createAtom "users"
-    listOfUsers <- gets (M.lookup key)
-    case listOfUsers of
-        Just (VUsers users) -> do
-            evalPredicates x x predicates pts users
-            evalStatements expressions pts
-        Nothing -> throwError $ DefaultError "No users in system"
-        _ -> throwError $ DefaultError "Something went wrong!"
 
 
 ----------------------
@@ -400,6 +487,42 @@ evalWhen relation exps1 exps2 pts = do
             Nothing -> do
                 _ <- withBinding key (VWhen [w])
                 return new_pts
+
+-- For addition
+-- evalWhen :: Relation -> [Expression] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore
+-- evalWhen relation exps1 exps2 pts = do
+--     tmp <- createAtom "tmp"
+--     lookup <- gets (M.lookup tmp)
+--     case lookup of
+--         Just (VTmp x val) ->
+--             let newRelation = changeRelation relation x val in do
+--             r_res <- evalRelation newRelation pts
+--             new_pts <- evalIf newRelation exps1 exps2 pts
+--             key <- createAtom "when"
+--             whenProcess <- gets (M.lookup key)
+--             let w = (r_res, newRelation, exps1, exps2) in do
+--                 case whenProcess of
+--                     Just (VWhen whens) -> do
+--                         _ <- withBinding key (VWhen (nub $ w:whens))
+--                         return new_pts
+--                     Nothing -> do
+--                         _ <- withBinding key (VWhen [w])
+--                         return new_pts
+--         Nothing -> do
+--             r_res <- evalRelation relation pts
+--             new_pts <- evalIf relation exps1 exps2 pts
+--             key <- createAtom "when"
+--             whenProcess <- gets (M.lookup key)
+--             let w = (r_res, relation, exps1, exps2) in do
+--                 case whenProcess of
+--                     Just (VWhen whens) -> do
+--                         _ <- withBinding key (VWhen (nub $ w:whens))
+--                         return new_pts
+--                     Nothing -> do
+--                         _ <- withBinding key (VWhen [w])
+--                         return new_pts
+
+
 
 -- Checks if a "when" key exists in the bindings. Goes through values if it exists. 
 processWhen :: PreTrustStore -> RunEnv PreTrustStore
@@ -424,3 +547,122 @@ whenRerun ((oldResult, relation, exps1, exps2):whens) pts = do
             new_pts <- evalIf relation exps1 exps2 pts
             whenRerun whens new_pts
 whenRerun [] pts = do return pts
+
+-- For addition
+changeRelation :: Relation -> Atom -> Atom -> Relation
+changeRelation (RSize group op size) _a1 _a2 = do RSize group op size
+changeRelation (RNot relation) _a1 _a2 = do RNot $ changeRelation relation _a1 _a2
+changeRelation (RIn a group) _a1 _a2 = do RIn a group
+changeRelation (REval from to exps) x val = do
+    case relationIntermediary x from to of
+        1 -> do REval from val exps
+        2 -> do REval val to exps
+        3 -> do REval from to exps
+
+relationIntermediary :: Atom -> Atom -> Atom -> Int
+relationIntermediary x from to
+    | x == to   = do 1
+    | x == from = do 2
+    | otherwise = do 3
+
+-- evalTest :: Relation -> RunEnv Relation
+-- evalTest (REval from to exps) = do
+--     tmp <- createAtom "tmp"
+--     lookup <- gets (M.lookup tmp)
+--     case lookup of
+--         Just (VTmp x val) -> do
+--             case relationIntermediary x from to of
+--                 1 -> return $  REval from to exps
+--                 2 -> return $ REval from to exps
+--                 3 -> return $ REval from to exps
+--         Nothing -> return $ REval from to exps
+
+---------------------
+--- For statement ---
+---------------------
+-- evalFor :: Atom -> [Pred] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore
+-- evalFor x predicates expressions pts = do
+--     key <- createAtom "users"
+--     listOfUsers <- gets (M.lookup key)
+--     case listOfUsers of
+--         Just (VUsers users) -> do
+--             evalPredicates x x predicates pts users
+--             evalStatements expressions pts
+--         Nothing -> throwError $ DefaultError "No users in system"
+--         _ -> throwError $ DefaultError "Something went wrong!"
+
+
+-- New for: Functions as for loop
+evalForPred :: Atom -> [Pred] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore
+evalForPred x predicates expressions pts = do
+    key <- createAtom "users"
+    listOfUsers <- gets (M.lookup key)
+    case listOfUsers of
+        Nothing -> throwError $ DefaultError "No users in system"
+        Just (VUsers users) -> do
+            evalPredicates x x predicates pts users
+            lookupG <- gets (M.lookup x)
+            case lookupG of
+                Just (VGroup group) -> evalForExplicit x group expressions pts
+                _ -> throwError $ DefaultError "For opration failed to find group!"
+
+
+
+evalForExplicit :: Atom -> [Atom] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore
+evalForExplicit x [] expressions pts = return pts
+evalForExplicit x (m:ms) expressions pts = do
+    let newExps = changeExpressions expressions x m in do
+        newPts <- evalStatements newExps pts
+        evalForExplicit x ms expressions newPts
+
+evalFor :: Atom -> Atom -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore
+evalFor x group expressions pts = do
+    members <- gets (M.lookup group)
+    case members of 
+        Just (VGroup g) -> evalForExplicit x g expressions pts
+        _ -> throwError $ NoBindingForVariable group
+
+
+
+--- For additions
+
+changeExpressions :: [Expression] -> Atom -> Atom -> [Expression]
+changeExpressions exps x val
+  = map (\ exp -> changeExpression exp x val) exps
+
+changeExpression :: Expression -> Atom -> Atom -> Expression
+changeExpression (EDel from to exp) x val = do
+    case findX x from to of
+        1 -> do EDel from val exp
+        2 -> do EDel val to exp
+        3 -> do EDel from to exp
+
+changeExpression (EIf rel exps1 exps2) x val =
+    let newRelation = changeRelation rel x val in 
+        let newExps1 = changeExpressions exps1 x val in 
+            let newExps2 = changeExpressions exps2 x val in 
+                EIf newRelation newExps1 newExps2
+
+changeExpression (EWhen rel exps1 exps2) x val = 
+    let newRelation = changeRelation rel x val in 
+        let newExps1 = changeExpressions exps1 x val in 
+            let newExps2 = changeExpressions exps2 x val in 
+                EWhen newRelation newExps1 newExps2
+
+changeExpression (EPolTmp a exp) x val = EPolTmp a exp
+changeExpression (EPol pol) x val = EPol pol
+changeExpression (EVar atom) x val = EVar atom
+changeExpression (EValue int) x val = EValue int
+changeExpression (EImp var pred exps) x val = EImp var pred exps
+changeExpression (EGroup name members) x val = EGroup name members
+changeExpression (EPred a1 a2 pred) x val = EPred a1 a2 pred
+changeExpression (EFor var group exps) x val = 
+    let newExps = changeExpressions exps x val in EFor var group newExps
+changeExpression (EForExplicit var members exps) x val = 
+    let newExps = changeExpressions exps x val in EForExplicit var members newExps
+
+findX :: Atom -> Atom -> Atom -> Int
+findX x from to
+    | x == to   = do 1
+    | x == from = do 2
+    | otherwise = do 3

@@ -111,12 +111,30 @@ pWhen = do
     pString "otherwise"; e2 <- braces pExpressions
     return $ EWhen r e1 e2
 
+-- pImplication :: Parser Expression
+-- pImplication = do
+--     pString "for";   v <- variable
+--     pString "where"; p <- braces preds
+--     pString "do";    e <- braces pExpressions
+--     return $ EImp v p e
+
 pImplication :: Parser Expression
-pImplication = do
+pImplication = try (do
     pString "for";   v <- variable
     pString "where"; p <- braces preds
     pString "do";    e <- braces pExpressions
-    return $ EImp v p e
+    return $ EImp v p e)
+    <|> try (do
+    pString "for"; v <- variable
+    pString "in";  g <- variable
+    pString "do";  e <- braces pExpressions
+    return $ EFor v g e)
+    <|> do
+    pString "for"; v <- variable
+    pString "in";  members <- brackets $ sepBy1 user comma
+    pString "do";  e <- braces pExpressions
+    return $ EForExplicit v members e 
+
 
 pDelegation :: Parser Expression
 pDelegation = do

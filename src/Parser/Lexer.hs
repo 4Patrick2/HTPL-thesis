@@ -205,23 +205,42 @@ operator = lexeme $
     <|> do greater;      return Greater
     <|> do equal; equal; return Eq
 
+-- relation :: Parser Relation
+-- relation =
+--         do  pString "not"
+--             RNot <$> relation
+--     <|> do  pString "eval";     symbol "("
+--             from <- user;       comma
+--             to   <- user;       comma
+--             pol  <- pPolicy;    symbol ")"
+--             return $ REval from to pol
+--     <|> try (do name <- user
+--                 pString "in"
+--                 RIn name <$> variable)
+--     <|> try (do group <- variable
+--                 op <- operator
+--                 RSize group op <$> integer)
+--     <|> fail "Relation not properly formattet."
+
+
+-- Relations changed for "for" opetation
+-- Change: Relations accepts users and variables.
 relation :: Parser Relation
 relation =
         do  pString "not"
             RNot <$> relation
-    <|> do  pString "eval";     symbol "("
-            from <- user;       comma
-            to   <- user;       comma
-            pol  <- pPolicy;    symbol ")"
+    <|> do  pString "eval";         symbol "("
+            from <- userOrVariable; comma
+            to   <- userOrVariable; comma
+            pol  <- pPolicy;        symbol ")"
             return $ REval from to pol
-    <|> try (do name <- user
+    <|> try (do name <- userOrVariable
                 pString "in"
                 RIn name <$> variable)
     <|> try (do group <- variable
                 op <- operator
                 RSize group op <$> integer)
     <|> fail "Relation not properly formattet."
-
 
 --------------------
 -- Map functions ---

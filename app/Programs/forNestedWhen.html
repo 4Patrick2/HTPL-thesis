@@ -1,0 +1,20 @@
+lang Tag {aspect1, aspect2}.
+
+group Group2 = [id4, id5, id6];
+
+for X in Group1 do {
+    for Y in Group2 do {
+        trust (X, Y) with {Tag: aspect1}
+    } 
+}.
+
+
+group Group1 = [id1, id2, id3];
+policy Asp1 = {Tag: aspect1};
+for X in Group1 do {
+    when (eval(id1, X, Asp1)) do {
+        when (eval(id))
+    } otherwise {
+
+    }
+}

@@ -13,7 +13,7 @@ main :: IO ()
 main = defaultMain $ localOption (mkTimeout 1000000) tests
 
 -- tests :: TestTree
-tests = testGroup "HTPL - Parser Testing:" [parserTests, expressionTest, policyTempTest, implicationTests, whenTests, ifTests, literalsTests, delegationTests]
+tests = testGroup "HTPL - Parser Testing:" [parserTests, expressionTest, policyTempTest, implicationTests, whenTests, ifTests, literalsTests, delegationTests, forTests]
 
 parserTests :: TestTree
 parserTests =
@@ -391,3 +391,36 @@ exp_when_true = "when (eval(id1,id2, {Tag: aspect1})) do {trust(id2, id3) with {
 
 
 
+forTests :: TestTree
+forTests =
+  testGroup "Evaluation: For operations:" [
+    testCase "For: Delegations" $ evalTest (lan ++ forDel) "id1" "id2" @?= 
+      Right (SuperPolicy {policies = [Policy (M.fromList [("Music",LBot),("Tag",TDNS (Node (Atom "aspect2") (Leaf LTop) (Leaf LTop))),("Tag_",LBot)])]}),
+    
+    testCase "For: If - True" $ evalTest (lan ++ forIfFalse) "id1" "id2" @?= 
+      Right (SuperPolicy {policies = [Policy (M.fromList [("Music",LBot),("Tag",TDNS (Node (Atom "aspect2") (Leaf LTop) (Leaf LTop))),("Tag_",LBot)])]}),
+    
+    testCase "For: If - False" $ evalTest (lan ++ forIfTrue) "id1" "id2" @?= 
+      Right (SuperPolicy {policies = [Policy (M.fromList [("Music",LBot),("Tag",TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop))),("Tag_",LBot)])]}),
+    
+    testCase "For: When" $ evalTest (lan ++ forWhen) "id1" "id2" @?= 
+      Right (SuperPolicy {policies = [Policy (M.fromList [("Music",LBot),("Tag",TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop))),("Tag_",LBot)])]}),
+
+    testCase "For: When - Changed" $ evalTest (lan ++ forWhenChanged) "id1" "id2" @?= 
+      Right (SuperPolicy {policies = [Policy (M.fromList [("Music",LBot),("Tag",TDNS (Node (Atom "aspect2") (Leaf LTop) (Leaf LTop))),("Tag_",LBot)]),Policy (M.fromList [("Music",LBot),("Tag",TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop))),("Tag_",LBot)])]}),
+    
+    testCase "For: Pred" $ evalTest (forPred) "captain" "buoy1" @?= 
+      Right (SuperPolicy {policies = [Policy (M.fromList [("Nav",TDNS (Node (Atom "revoked") (Leaf LTop) (Leaf LTop)))]),Policy (M.fromList [("Nav",TDNS (Node (Atom "buoy") (Leaf (Atom "Capesize")) (Leaf LTop)))])]}),
+
+    testCase "For: Nested for loops" $ evalTest (forNestedFor) "id1" "id5" @?= 
+      Right (SuperPolicy {policies = [Policy (M.fromList [("Tag",TDNS (Node (Atom "aspect1") (Leaf LTop) (Leaf LTop)))])]})
+  ]
+--testCase "" $ evalTest () "id1" "id2" @?= 
+
+forDel = "for X in [id2, id3, id4] do {trust(id1, X) with {Tag: aspect2}}."
+forIfFalse = "trust(id2, id1) with {Tag: aspect2}; for X in [id2, id3, id4] do {if (eval(X, id1, {Tag: aspect2})) then {trust(id1, X) with {Tag: aspect2}} else {trust(id1, X) with {Tag: aspect1}}}." 
+forIfTrue = "for X in [id2, id3, id4] do {if (eval(X, id1, {Tag: aspect2})) then {trust(id1, X) with {Tag: aspect2}} else {trust(id1, X) with {Tag: aspect1}}}." 
+forWhen = "group Members = [id2, id3, id4]; for X in Members do { when (eval(X, id1, {Tag: aspect1})) do {trust(id1, X) with {Tag: aspect2}} otherwise {trust(id1, X) with {Tag: aspect1}} }."
+forWhenChanged = "group Members = [id2, id3, id4]; for X in Members do { when (eval(X, id1, {Tag: aspect1})) do {trust(id1, X) with {Tag: aspect2}} otherwise {trust(id1, X) with {Tag: aspect1}} }; trust(id2, id1) with {Tag: aspect1}."
+forPred = "lang Nav {buoy[Capesize], buoy[Suezmax], buoy, revoked}. trust (dma, buoy1) with {Nav: buoy[Capesize]}; trust (dma, buoy2) with {Nav: buoy[Suezmax]}; for X where {dma, X:  {Nav: buoy}} do {when (eval(dma, X, {Nav: buoy[Capesize]})) do {trust (captain, X) with {Nav: buoy[Capesize]}} otherwise {trust (captain, X) with {Nav: revoked}}}; trust (dma, buoy1) with {Nav: revoked}."
+forNestedFor = " lang Tag {aspect1, aspect2}. group Group1 = [id1, id2, id3]; group Group2 = [id4, id5, id6]; for X in Group1 do { for Y in Group2 do { trust (X, Y) with {Tag: aspect1} } }."

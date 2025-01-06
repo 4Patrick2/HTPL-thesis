@@ -47,6 +47,9 @@ data Expression =
     | EImp Atom [Pred] [Expression] 
     | EGroup Atom [Atom]
     | EPred Atom Atom [Pred]
+    -- Additions for "for"
+    | EFor Atom Atom [Expression] 
+    | EForExplicit Atom [Atom] [Expression] 
   deriving (Eq, Show)
 
 -- Predicate: Holds the sender, receiver and expression.

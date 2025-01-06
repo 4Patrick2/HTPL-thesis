@@ -1,0 +1,9 @@
+lang Tag {aspect1, aspect2, aspect3}.
+
+trust (u1, u2) with {Tag: aspect1};
+
+for X in [u3,u4,u5] do {
+    #trust(u1, u3) with {Tag: aspect2}
+    trust(u1, X) with {Tag: aspect2}
+    #trust(X, u3) with {Tag: aspect2}
+}.
