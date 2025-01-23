@@ -11,6 +11,6 @@ for X where {
     } otherwise {
         trust (captain, X) with {Nav: revoked}
     }
-};
+}.
 
-trust (dma, buoy1) with {Nav: revoked}.
+#trust (dma, buoy1) with {Nav: revoked}

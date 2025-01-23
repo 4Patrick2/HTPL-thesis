@@ -18,7 +18,7 @@ printErrors err = do
         NoBindingForVariable a -> do "No available binding for variable " ++ T.unpack(a) ++ "."    
         NoBindingForPolicy a -> do "No available binding for policy " ++ T.unpack(a) ++ "."    
         UnsupportedOperation s -> do "Unsuported operation: " ++ s
-        NoLanguageOption at al -> do "The aspect tag "++T.unpack(at) ++ " has no langauge option " ++ T.unpack(tdnsToString al)
+        NoLanguageOption at al -> do "Error: The aspect tag "++T.unpack(at) ++ " has no langauge option \"" ++ T.unpack(tdnsToString al) ++ "\""
         DefaultError s -> do "An error has occurred: " ++ s
         BadPredicate s -> do "Invalid predicate: " ++ s
         BadComparison -> do "Invalid comparison operator."

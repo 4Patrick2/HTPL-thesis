@@ -43,7 +43,8 @@ topEvaluation :: [Expression] -> RunEnv PreTrustStore
 topEvaluation stmts = evalStatements stmts MM.empty
 
 -- Evaluates consecuative statements. Checks for changes in "when" relations in between.
-evalStatements :: [Expression] -> PreTrustStore -> RunEnv PreTrustStore
+evalStatements :: [Expression] -> PreTrustStore 
+                        -> RunEnv PreTrustStore
 evalStatements (stmt:stmts) pts = do
     whenPts <- processWhen pts
     newPts <- evalStatement stmt whenPts
@@ -517,14 +518,16 @@ evalForPred x predicates expressions pts = do
 
 
 
-evalForExplicit :: Atom -> [Atom] -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore
+evalForExplicit :: Atom -> [Atom] -> [Expression] 
+                    -> PreTrustStore -> RunEnv PreTrustStore
 evalForExplicit x [] expressions pts = return pts
 evalForExplicit x (m:ms) expressions pts = do
     let newExps = changeExpressions expressions x m in do
         newPts <- evalStatements newExps pts
         evalForExplicit x ms expressions newPts
 
-evalFor :: Atom -> Atom -> [Expression] -> PreTrustStore -> RunEnv PreTrustStore
+evalFor :: Atom -> Atom -> [Expression] 
+                        -> PreTrustStore -> RunEnv PreTrustStore
 evalFor x group expressions pts = do
     members <- gets (M.lookup group)
     case members of 
